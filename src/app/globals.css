@@ -1,0 +1,100 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── OraQL_ Design System v2: Global Styles ─── */
+/* Fonts loaded via next/font/google in layout.tsx — no CSS @import needed */
+
+@layer base {
+  :root {
+    --color-warm-white: #FAF8F5;
+    --color-warm-cream: #F0ECE4;
+    --color-warm-sand: #E5DFD3;
+    --color-dark-ink: #1A1A1E;
+    --color-dark-charcoal: #222226;
+    --color-dark-graphite: #2C2C32;
+    --color-oracle-gold: #C8A44E;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply font-body bg-warm-white text-txt-primary;
+  }
+
+  ::selection {
+    background: #C8A44E;
+    color: #1A1A1E;
+  }
+}
+
+@layer components {
+  /* ─── Surface variants ─── */
+  .surface-warm {
+    @apply bg-warm-white text-txt-primary;
+  }
+  .surface-cream {
+    @apply bg-warm-cream text-txt-primary;
+  }
+  .surface-dark {
+    @apply bg-dark-ink text-txt-inverse;
+  }
+  .surface-charcoal {
+    @apply bg-dark-charcoal text-txt-inverse;
+  }
+
+  /* ─── Decorative background letter ─── */
+  .deco-letter {
+    @apply absolute font-display font-bold pointer-events-none select-none;
+    font-size: 20rem;
+    line-height: 0.8;
+    opacity: 0.06;
+  }
+  .surface-dark .deco-letter,
+  .bg-dark-ink .deco-letter {
+    opacity: 0.04;
+    color: white;
+  }
+
+  /* ─── Probability badge colors ─── */
+  .prob-high {
+    @apply bg-prob-high/10 text-prob-high border border-prob-high/20;
+  }
+  .prob-mid {
+    @apply bg-prob-mid/10 text-prob-mid border border-prob-mid/20;
+  }
+  .prob-low {
+    @apply bg-dark-ash/10 text-txt-tertiary border border-dark-ash/20;
+  }
+  .prob-value {
+    @apply bg-value/10 text-value border border-value/20;
+  }
+
+  /* ─── Live indicator ─── */
+  .live-dot {
+    @apply w-2 h-2 rounded-full bg-live animate-pulse-live;
+  }
+}
+
+@layer utilities {
+  /* ─── OraQL_ gold gradient text ─── */
+  .text-oracle-gradient {
+    background: linear-gradient(135deg, #DBBF6F 0%, #C8A44E 50%, #A88A3A 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* ─── Scrollbar styling ─── */
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
