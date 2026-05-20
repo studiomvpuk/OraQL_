@@ -1,0 +1,100 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-warm-white: #f9f7f3;
+  --color-cream: #faf8f3;
+  --color-sand: #f5f1e8;
+  --color-dark-ink: #1a1815;
+  --color-charcoal: #2a2520;
+  --color-graphite: #3a3530;
+  --color-oracle-gold: #d4a574;
+}
+
+/* Surface Classes */
+.surface-warm {
+  @apply bg-[#f9f7f3];
+}
+
+.surface-cream {
+  @apply bg-[#faf8f3];
+}
+
+.surface-dark {
+  @apply bg-[#2a2520];
+}
+
+.surface-charcoal {
+  @apply bg-[#1a1815];
+}
+
+/* Deco Letter Class */
+.deco-letter {
+  @apply text-[20rem] font-bold opacity-0 pointer-events-none absolute;
+}
+
+.deco-letter.warm {
+  @apply opacity-[0.06] text-[#1a1815];
+}
+
+.deco-letter.dark {
+  @apply opacity-[0.04] text-white;
+}
+
+/* Probability Badge Classes */
+.prob-high {
+  @apply bg-green-100 text-green-900 border border-green-300;
+}
+
+.prob-mid {
+  @apply bg-yellow-100 text-yellow-900 border border-yellow-300;
+}
+
+.prob-low {
+  @apply bg-red-100 text-red-900 border border-red-300;
+}
+
+.prob-value {
+  @apply font-mono text-sm font-bold;
+}
+
+/* Live Dot Animation */
+@keyframes pulse-dot {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.live-dot {
+  @apply inline-block w-2 h-2 rounded-full bg-green-500 animate-pulse;
+}
+
+/* Text Oracle Gradient */
+.text-oracle-gradient {
+  @apply bg-gradient-to-r from-[#d4a574] to-[#c99465] bg-clip-text text-transparent;
+}
+
+/* Scrollbar Hide */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Smooth Scrolling */
+html {
+  @apply scroll-smooth;
+}
+
+/* Body Defaults */
+body {
+  @apply antialiased;
+}
