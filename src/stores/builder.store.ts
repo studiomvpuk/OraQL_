@@ -1,100 +1,52 @@
-import { create } from 'zustand';
-import type { BuilderSelection, BuilderState } from '@/types';
+'use client';
 
-interface BuilderStoreState extends BuilderState {
-  add: (selection: BuilderSelection) => void;
-  remove: (pickId: string) => void;
-  clear: () => void;
-  load: (selections: BuilderSelection[]) => void;
-  exportText: () => string;
+import { create } from 'zustand';
+import { api } from '@/lib/api';
+import type { BuilderState, BuilderSelection } from '@/types';
+
+interface BuilderStore extends BuilderState {
+  isLoading: boolean;
+  load: () => Promise<void>;
+  add: (marketId: string) => Promise<void>;
+  remove: (marketId: string) => Promise<void>;
+  clear: () => Promise<void>;
+  exportText: () => Promise<string>;
 }
 
-const calculateCombinedOdds = (selections: BuilderSelection[]): number => {
-  if (selections.length === 0) return 1;
-  return selections.reduce((acc, sel) => acc * sel.odds, 1);
-};
-
-const calculateCombinedProbability = (selections: BuilderSelection[]): number => {
-  if (selections.length === 0) return 0;
-  return selections.reduce((acc, sel) => acc * sel.probability, 1);
-};
-
-export const useBuilderStore = create<BuilderStoreState>((set) => ({
+export const useBuilderStore = create<BuilderStore>((set, get) => ({
   selections: [],
   count: 0,
-  combinedProbability: 0,
-  combinedOdds: 1,
+  combinedProbability: 1,
+  isLoading: false,
 
-  load: (selections: BuilderSelection[]) => {
-    set({
-      selections,
-      count: selections.length,
-      combinedProbability: calculateCombinedProbability(selections),
-      combinedOdds: calculateCombinedOdds(selections),
-    });
+  load: async () => {
+    set({ isLoading: true });
+    try {
+      const data = await api.get<BuilderState>('/builder');
+      set({ ...data, isLoading: false });
+    } catch {
+      set({ isLoading: false });
+    }
   },
 
-  add: (selection: BuilderSelection) => {
-    set((state) => {
-      const newSelections = [...state.selections, selection];
-      return {
-        selections: newSelections,
-        count: newSelections.length,
-        combinedProbability: calculateCombinedProbability(newSelections),
-        combinedOdds: calculateCombinedOdds(newSelections),
-      };
-    });
+  add: async (marketId) => {
+    await api.post(`/builder/add/${marketId}`);
+    // Reload full state for consistency
+    await get().load();
   },
 
-  remove: (pickId: string) => {
-    set((state) => {
-      const newSelections = state.selections.filter((sel) => sel.pickId !== pickId);
-      return {
-        selections: newSelections,
-        count: newSelections.length,
-        combinedProbability: calculateCombinedProbability(newSelections),
-        combinedOdds: calculateCombinedOdds(newSelections),
-      };
-    });
+  remove: async (marketId) => {
+    await api.delete(`/builder/remove/${marketId}`);
+    await get().load();
   },
 
-  clear: () => {
-    set({
-      selections: [],
-      count: 0,
-      combinedProbability: 0,
-      combinedOdds: 1,
-    });
+  clear: async () => {
+    await api.delete('/builder/clear');
+    set({ selections: [], count: 0, combinedProbability: 1 });
   },
 
-  exportText: () => {
-    const state = create<BuilderStoreState>((set) => ({
-      selections: [],
-      count: 0,
-      combinedProbability: 0,
-      combinedOdds: 1,
-      add: () => {},
-      remove: () => {},
-      clear: () => {},
-      load: () => {},
-      exportText: () => '',
-    }))((state) => state);
-
-    const { selections, count, combinedProbability, combinedOdds } = state;
-    if (count === 0) return 'No selections in builder';
-
-    const lines: string[] = ['Oracle Builder Parlay', `Picks: ${count}`, ''];
-
-    selections.forEach((sel, idx) => {
-      lines.push(`${idx + 1}. ${sel.eventTitle}`);
-      lines.push(`   ${sel.label}`);
-      lines.push(`   Probability: ${(sel.probability * 100).toFixed(1)}% | Odds: ${sel.odds.toFixed(2)}`);
-    });
-
-    lines.push('');
-    lines.push(`Combined Probability: ${(combinedProbability * 100).toFixed(1)}%`);
-    lines.push(`Combined Odds: ${combinedOdds.toFixed(2)}`);
-
-    return lines.join('\n');
+  exportText: async () => {
+    const result = await api.get<{ text: string }>('/builder/export');
+    return result.text;
   },
 }));

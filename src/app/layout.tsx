@@ -4,29 +4,27 @@ import './globals.css';
 
 const inter = Inter({
   subsets: ['latin'],
-  variable: '--font-inter',
+  variable: '--font-body',
   display: 'swap',
 });
 
 const spaceGrotesk = Space_Grotesk({
   subsets: ['latin'],
-  variable: '--font-space-grotesk',
+  variable: '--font-display',
   display: 'swap',
 });
 
 const jetbrainsMono = JetBrains_Mono({
   subsets: ['latin'],
-  variable: '--font-jetbrains-mono',
+  variable: '--font-mono',
   display: 'swap',
 });
 
 export const metadata: Metadata = {
   title: 'OraQL_ — Sports Betting Intelligence',
   description:
-    'Smarter bets start with better data. Advanced analytics and insights for sports betting.',
-  icons: {
-    icon: '/favicon.ico',
-  },
+    'Data-driven probability analysis for smarter betting decisions. Ranked picks, transparent reasoning, and multi-match strategy building.',
+  keywords: ['sports betting', 'probability', 'OraQL_ picks', 'betting intelligence'],
 };
 
 export default function RootLayout({
@@ -35,8 +33,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${inter.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable}`}>
-      <body className="min-h-screen bg-[#f9f7f3] font-body">
+    <html
+      lang="en"
+      className={`${inter.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable}`}
+    >
+      <body className="min-h-screen bg-warm-white font-body text-txt-primary antialiased">
         {children}
       </body>
     </html>

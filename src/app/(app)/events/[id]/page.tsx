@@ -1,243 +1,280 @@
 'use client';
 
-import { useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Plus, X } from 'lucide-react';
-import { PickCard } from '@/components/PickCard';
-
-interface Market {
-  id: string;
-  name: string;
-  category: string;
-}
-
-interface MarketDetail {
-  id: string;
-  market: string;
-  description: string;
-  selections: string[];
-  explanation: string;
-}
-
-interface Pick {
-  id: string;
-  eventId: string;
-  market: string;
-  selection: string;
-  probability: number;
-  odds: number;
-  reasoning: string;
-}
-
-interface Event {
-  id: string;
-  league: string;
-  homeTeam: string;
-  awayTeam: string;
-  score?: string;
-  time: string;
-  status: 'upcoming' | 'live' | 'finished';
-}
+import { useState, useEffect } from 'react';
+import { useParams } from 'next/navigation';
+import { ArrowLeft, Star, Clock, MapPin } from 'lucide-react';
+import Link from 'next/link';
+import { cn, formatKickoff, formatCategory } from '@/lib/utils';
+import { PickCard } from '@/components/picks/PickCard';
+import { MarketChip } from '@/components/markets/MarketChip';
+import { ProbabilityBadge } from '@/components/ui/ProbabilityBadge';
+import { Button } from '@/components/ui/Button';
+import { api } from '@/lib/api';
+import { useBuilderStore } from '@/stores/builder.store';
+import type { EventDetail, Market, MarketCategory } from '@/types';
 
 export default function EventDetailPage() {
-  const router = useRouter();
   const params = useParams();
-  const eventId = params.id as string;
+  const eventId = params?.id as string;
+  const [event, setEvent] = useState<EventDetail | null>(null);
+  const [activeCategory, setActiveCategory] = useState<MarketCategory | 'ALL'>('ALL');
+  const [selectedMarket, setSelectedMarket] = useState<Market | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const addToBuilder = useBuilderStore((s) => s.add);
 
-  // Mock event data
-  const event: Event = {
-    id: eventId,
-    league: 'NFL',
-    homeTeam: 'Kansas City Chiefs',
-    awayTeam: 'Denver Broncos',
-    time: '2024-12-15T20:20:00Z',
-    status: 'upcoming',
-  };
+  useEffect(() => {
+    if (eventId) loadEvent();
+  }, [eventId]);
 
-  const oraqlPicks: Pick[] = [
-    {
-      id: 'pick-1',
-      eventId,
-      market: 'Moneyline',
-      selection: 'Kansas City Chiefs',
-      probability: 0.72,
-      odds: 1.65,
-      reasoning: 'Strong offensive momentum with 3-game winning streak. Defensive secondary performing well.',
-    },
-    {
-      id: 'pick-2',
-      eventId,
-      market: 'Over/Under',
-      selection: 'Over 47.5',
-      probability: 0.68,
-      odds: 1.91,
-      reasoning: 'Both teams averaging 25+ points in last 5 games. Weather conditions favor high scoring.',
-    },
-  ];
+  async function loadEvent() {
+    setIsLoading(true);
+    try {
+      const data = await api.get<EventDetail>(`/events/${eventId}`);
+      setEvent(data);
+    } catch {
+      // handle error
+    }
+    setIsLoading(false);
+  }
 
-  const markets: Market[] = [
-    { id: 'm-1', name: 'Moneyline', category: 'Standard' },
-    { id: 'm-2', name: 'Spread', category: 'Standard' },
-    { id: 'm-3', name: 'Over/Under', category: 'Totals' },
-    { id: 'm-4', name: 'First Half Moneyline', category: 'Halves' },
-    { id: 'm-5', name: 'Player Props', category: 'Props' },
-    { id: 'm-6', name: 'Team Totals', category: 'Totals' },
-  ];
+  if (isLoading) {
+    return (
+      <div className="p-6">
+        <div className="h-64 animate-pulse rounded-oracle-lg bg-warm-cream" />
+      </div>
+    );
+  }
 
-  const [selectedCategory, setSelectedCategory] = useState('Standard');
-  const [selectedMarket, setSelectedMarket] = useState<MarketDetail | null>(null);
+  if (!event) {
+    return (
+      <div className="flex h-96 items-center justify-center">
+        <p className="text-txt-tertiary">Event not found.</p>
+      </div>
+    );
+  }
 
-  const categories = Array.from(new Set(markets.map((m) => m.category)));
+  const isLive = event.status === 'LIVE' || event.status === 'HALF_TIME';
 
-  const filteredMarkets = markets.filter((m) => m.category === selectedCategory);
-
-  const handleSelectMarket = (market: Market) => {
-    setSelectedMarket({
-      id: market.id,
-      market: market.name,
-      description: `Detailed odds and analysis for ${market.name}`,
-      selections: ['Option 1', 'Option 2', 'Option 3'],
-      explanation:
-        'This market offers opportunities based on recent team performance, weather conditions, and historical matchup data. Our AI model indicates strong value in this selection.',
-    });
-  };
+  // Group markets by category
+  const categories = Array.from(new Set(event.markets.map((m) => m.category)));
+  const filteredMarkets =
+    activeCategory === 'ALL'
+      ? event.markets
+      : event.markets.filter((m) => m.category === activeCategory);
 
   return (
-    <div className="min-h-screen bg-[#f9f7f3]">
-      {/* Header with Event Info */}
-      <section className="bg-[#faf8f3] border-b border-[#e5dfd6] py-8 relative overflow-hidden">
-        <div className="absolute top-4 right-20 deco-letter warm">V</div>
-        <div className="max-w-7xl mx-auto px-6 relative z-10">
-          <button
-            onClick={() => router.back()}
-            className="flex items-center gap-2 text-[#1a1815] hover:text-[#d4a574] transition-colors mb-6 font-medium"
-          >
-            <ArrowLeft size={18} />
-            Back
-          </button>
+    <div className="space-y-8">
+      {/* ─── Back to Dashboard Link ─── */}
+      <div className="px-6 pt-6">
+        <Link
+          href="/dashboard"
+          className="inline-flex items-center gap-2 text-body-sm text-txt-secondary hover:text-txt-primary transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Dashboard
+        </Link>
+      </div>
 
-          <div className="grid md:grid-cols-2 gap-8">
-            <div>
-              <p className="text-sm font-light text-[#3a3530] mb-2">{event.league}</p>
-              <h1 className="text-3xl font-bold text-[#1a1815] mb-2">
-                {event.homeTeam} vs {event.awayTeam}
-              </h1>
-              <p className="text-[#3a3530] font-light">
-                {new Date(event.time).toLocaleDateString('en-US', {
-                  weekday: 'long',
-                  month: 'short',
-                  day: 'numeric',
-                  hour: 'numeric',
-                  minute: '2-digit',
-                })}
-              </p>
-            </div>
-            <div className="flex items-center justify-end">
-              <div className="text-right">
-                <p className="text-sm text-[#3a3530] font-light mb-2">Status</p>
-                <div className="flex items-center gap-2">
-                  {event.status === 'live' && <div className="live-dot" />}
-                  <p className="text-lg font-bold text-[#1a1815] capitalize">{event.status}</p>
-                </div>
-              </div>
-            </div>
-          </div>
+      {/* ─── Event Header (Warm Cream Surface with Decorative V) ─── */}
+      <section className="relative overflow-hidden bg-warm-cream px-6 py-8">
+        {/* Decorative "V" letter */}
+        <div className="absolute -right-8 -top-20 text-warm-sand opacity-100" style={{ fontSize: '200px', fontWeight: 'bold', lineHeight: 1 }}>
+          V
         </div>
-      </section>
 
-      {/* Main Content */}
-      <section className="py-8">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {/* Left Column - OraQL Picks */}
-            <div>
-              <h2 className="text-xl font-bold text-[#1a1815] mb-4">OraQL_ Picks</h2>
-              <div className="space-y-4">
-                {oraqlPicks.map((pick) => (
-                  <PickCard key={pick.id} pick={pick} variant="light" />
-                ))}
-              </div>
+        <div className="relative z-10 max-w-7xl mx-auto">
+          {/* League and Round */}
+          <div className="mb-4 flex items-center gap-3 text-body-sm text-txt-secondary">
+            <span className="font-semibold">{event.league.name}</span>
+            {event.round && (
+              <>
+                <span className="text-warm-stone">·</span>
+                <span>{event.round}</span>
+              </>
+            )}
+          </div>
+
+          {/* Teams and Score/Time */}
+          <div className="flex items-center justify-between gap-8">
+            <div className="flex-1">
+              <h1 className="font-display text-display-lg tracking-tight text-txt-primary">
+                {event.homeTeam.name}
+              </h1>
+              <p className="my-3 text-body text-txt-tertiary">vs</p>
+              <h1 className="font-display text-display-lg tracking-tight text-txt-primary">
+                {event.awayTeam.name}
+              </h1>
             </div>
 
-            {/* Right Column - All Markets */}
-            <div className="md:col-span-2">
-              <h2 className="text-xl font-bold text-[#1a1815] mb-4">All Markets</h2>
-
-              {/* Category Filters */}
-              <div className="flex gap-2 mb-6 overflow-x-auto scrollbar-hide pb-2">
-                {categories.map((cat) => (
-                  <button
-                    key={cat}
-                    onClick={() => setSelectedCategory(cat)}
-                    className={`px-4 py-2 rounded-lg whitespace-nowrap font-medium transition-colors ${
-                      selectedCategory === cat
-                        ? 'bg-[#1a1815] text-[#f9f7f3]'
-                        : 'bg-white border-2 border-[#e5dfd6] text-[#1a1815] hover:border-[#d4a574]'
-                    }`}
-                  >
-                    {cat}
-                  </button>
-                ))}
-              </div>
-
-              {/* Markets Grid */}
-              {selectedMarket ? (
-                <div className="space-y-6">
-                  <div className="bg-white rounded-lg border-2 border-[#e5dfd6] p-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-lg font-bold text-[#1a1815]">{selectedMarket.market}</h3>
-                      <button
-                        onClick={() => setSelectedMarket(null)}
-                        className="text-[#3a3530] hover:text-[#1a1815] transition-colors"
-                      >
-                        <X size={20} />
-                      </button>
-                    </div>
-
-                    <div className="space-y-4">
-                      <div>
-                        <p className="text-sm font-light text-[#3a3530] mb-2">Explanation</p>
-                        <p className="text-[#1a1815] font-light">{selectedMarket.explanation}</p>
-                      </div>
-
-                      <div>
-                        <p className="text-sm font-light text-[#3a3530] mb-3">Available Selections</p>
-                        <div className="space-y-2">
-                          {selectedMarket.selections.map((selection, idx) => (
-                            <div
-                              key={idx}
-                              className="flex items-center justify-between p-3 bg-[#f9f7f3] border border-[#e5dfd6] rounded-lg hover:border-[#d4a574] transition-colors cursor-pointer"
-                            >
-                              <span className="text-[#1a1815] font-medium">{selection}</span>
-                              <button className="flex items-center gap-1 px-3 py-1 bg-[#d4a574] text-white rounded hover:bg-[#c99465] transition-colors text-sm font-medium">
-                                <Plus size={14} />
-                                Add
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
+            {/* Score / Time / Venue */}
+            <div className="flex flex-col items-end justify-center gap-4">
+              {isLive ? (
+                <div className="text-right">
+                  <div className="mb-2 flex items-center justify-end gap-2">
+                    <span className="text-caption font-semibold text-live">LIVE</span>
+                    <span className="live-dot" />
                   </div>
+                  <p className="font-mono text-display-xl font-bold text-txt-primary">
+                    {event.homeScore ?? 0} — {event.awayScore ?? 0}
+                  </p>
                 </div>
               ) : (
-                <div className="grid md:grid-cols-2 gap-4">
-                  {filteredMarkets.map((market) => (
-                    <button
-                      key={market.id}
-                      onClick={() => handleSelectMarket(market)}
-                      className="p-4 bg-white rounded-lg border-2 border-[#e5dfd6] hover:border-[#d4a574] transition-colors text-left"
-                    >
-                      <h4 className="font-bold text-[#1a1815] mb-1">{market.name}</h4>
-                      <p className="text-sm text-[#3a3530] font-light">View odds and details</p>
-                    </button>
-                  ))}
+                <div className="space-y-3 text-right">
+                  <div className="flex items-center justify-end gap-2 text-txt-secondary">
+                    <Clock className="h-4 w-4" />
+                    <span className="text-body-sm">{formatKickoff(event.kickoffAt)}</span>
+                  </div>
+                  {event.venue && (
+                    <div className="flex items-center justify-end gap-2 text-txt-tertiary">
+                      <MapPin className="h-4 w-4" />
+                      <span className="text-body-sm">{event.venue}</span>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
           </div>
         </div>
       </section>
+
+      {/* ─── Two-Column Layout ─── */}
+      <div className="px-6 pb-6">
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-3 max-w-7xl mx-auto">
+          {/* ─── Left Column: OraQL_ Picks ─── */}
+          <div className="lg:col-span-1 space-y-6">
+            <div className="flex items-center gap-3">
+              <Star className="h-6 w-6 fill-oracle-gold text-oracle-gold flex-shrink-0" />
+              <h2 className="font-display text-heading tracking-tight text-txt-primary">
+                OraQL_ Picks
+              </h2>
+            </div>
+
+            {event.picks.length > 0 ? (
+              <div className="space-y-4">
+                {event.picks.map((pick) => (
+                  <PickCard key={pick.id} pick={pick} />
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-oracle-md border border-dashed border-warm-stone bg-warm-white p-6 text-center">
+                <p className="text-body-sm text-txt-tertiary">
+                  No strong picks identified for this event.
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* ─── Right Column: All Markets ─── */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Header with count */}
+            <div>
+              <h2 className="font-display text-heading tracking-tight text-txt-primary">
+                All Markets
+                <span className="ml-3 text-body text-txt-tertiary font-normal">
+                  {event.markets.length}
+                </span>
+              </h2>
+            </div>
+
+            {/* Category Filter Pills */}
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => setActiveCategory('ALL')}
+                className={cn(
+                  'rounded-full px-4 py-2 text-body-sm font-medium transition-all duration-200',
+                  activeCategory === 'ALL'
+                    ? 'bg-warm-white text-txt-primary shadow-soft'
+                    : 'bg-warm-cream text-txt-secondary hover:bg-warm-sand',
+                )}
+              >
+                All
+              </button>
+              {categories.map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => setActiveCategory(cat)}
+                  className={cn(
+                    'rounded-full px-4 py-2 text-body-sm font-medium transition-all duration-200',
+                    activeCategory === cat
+                      ? 'bg-warm-white text-txt-primary shadow-soft'
+                      : 'bg-warm-cream text-txt-secondary hover:bg-warm-sand',
+                  )}
+                >
+                  {formatCategory(cat)}
+                </button>
+              ))}
+            </div>
+
+            {/* Markets Grid */}
+            <div className="rounded-oracle-md bg-warm-white p-4 space-y-2">
+              {filteredMarkets.length > 0 ? (
+                filteredMarkets.map((market) => (
+                  <div
+                    key={market.id}
+                    className="relative transition-all duration-200 hover:before:opacity-100 before:absolute before:-left-4 before:top-0 before:bottom-0 before:w-1 before:bg-oracle-gold before:opacity-0 before:rounded-sm"
+                  >
+                    <MarketChip
+                      market={market}
+                      isSelected={selectedMarket?.id === market.id}
+                      onClick={() => setSelectedMarket(market)}
+                      variant="light"
+                    />
+                  </div>
+                ))
+              ) : (
+                <div className="py-8 text-center">
+                  <p className="text-body-sm text-txt-tertiary">
+                    No markets available for this category.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Selected Market Detail Panel */}
+            {selectedMarket && (
+              <div className="rounded-oracle-md border-2 border-oracle-gold bg-oracle-gold/[0.04] p-6 animate-fade-in space-y-4">
+                {/* Header with Title and Probability */}
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1">
+                    <h3 className="font-display text-heading tracking-tight text-txt-primary">
+                      {selectedMarket.name}
+                    </h3>
+                    <p className="mt-1 text-body-sm text-txt-secondary">
+                      {formatCategory(selectedMarket.category)}
+                    </p>
+                  </div>
+                  <div className="flex-shrink-0">
+                    <ProbabilityBadge
+                      probability={selectedMarket.probability}
+                      isValueBet={selectedMarket.isValueBet}
+                      size="lg"
+                    />
+                  </div>
+                </div>
+
+                {/* Explanation */}
+                {selectedMarket.explanation && (
+                  <p className="text-body-sm text-txt-secondary leading-relaxed">
+                    {selectedMarket.explanation}
+                  </p>
+                )}
+
+                {/* Add to Builder Button */}
+                <div className="pt-2">
+                  <Button
+                    variant="primary"
+                    size="md"
+                    onClick={() => addToBuilder(selectedMarket.id)}
+                    className="w-full"
+                  >
+                    Add to Bet Builder
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

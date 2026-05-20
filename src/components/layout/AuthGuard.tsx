@@ -1,40 +1,48 @@
-'use client'
+'use client';
 
-import { useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { useAuthStore } from '@/store/authStore'
-import { Trophy } from 'lucide-react'
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { Trophy } from 'lucide-react';
+import { useAuthStore } from '@/stores/auth.store';
 
 interface AuthGuardProps {
-  children: React.ReactNode
+  children: React.ReactNode;
 }
 
 export function AuthGuard({ children }: AuthGuardProps) {
-  const router = useRouter()
-  const { isAuthenticated, isLoading } = useAuthStore()
+  const { isAuthenticated, isLoading, loadUser } = useAuthStore();
+  const router = useRouter();
+
+  useEffect(() => {
+    loadUser();
+  }, [loadUser]);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      router.push('/auth')
+      router.push('/auth');
     }
-  }, [isAuthenticated, isLoading, router])
+  }, [isLoading, isAuthenticated, router]);
 
   if (isLoading) {
     return (
-      <div className="h-screen flex flex-col items-center justify-center gap-4">
-        <Trophy className="w-12 h-12 text-oracle-gold animate-bounce" />
-        <div className="flex gap-1">
-          <span className="w-2 h-2 bg-oracle-gold rounded-full animate-pulse" />
-          <span className="w-2 h-2 bg-oracle-gold rounded-full animate-pulse delay-100" />
-          <span className="w-2 h-2 bg-oracle-gold rounded-full animate-pulse delay-200" />
+      <div className="flex min-h-screen items-center justify-center bg-warm-white">
+        <div className="flex flex-col items-center gap-4 animate-fade-in">
+          <div className="flex h-14 w-14 items-center justify-center rounded-oracle-md bg-dark-ink">
+            <Trophy className="h-7 w-7 text-oracle-gold" />
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-oracle-gold" />
+            <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-oracle-gold" style={{ animationDelay: '150ms' }} />
+            <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-oracle-gold" style={{ animationDelay: '300ms' }} />
+          </div>
         </div>
       </div>
-    )
+    );
   }
 
   if (!isAuthenticated) {
-    return null
+    return null;
   }
 
-  return <>{children}</>
+  return <>{children}</>;
 }

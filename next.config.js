@@ -3,8 +3,14 @@ const nextConfig = {
   reactStrictMode: true,
   images: {
     remotePatterns: [
-      { protocol: 'https', hostname: 'media.api-sports.io' },
-      { protocol: 'https', hostname: '*.r2.cloudflarestorage.com' },
+      {
+        protocol: 'https',
+        hostname: 'media.api-sports.io', // API-Football logos
+      },
+      {
+        protocol: 'https',
+        hostname: '*.r2.cloudflarestorage.com', // R2 assets
+      },
     ],
   },
   async rewrites() {
@@ -16,4 +22,5 @@ const nextConfig = {
     ];
   },
 };
+
 module.exports = nextConfig;

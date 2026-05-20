@@ -1,154 +1,137 @@
-'use client'
+'use client';
 
-import { useState } from 'react'
-import { useBuilderStore } from '@/store/builderStore'
-import { cn } from '@/lib/utils'
-import { Button } from '@/components/ui/Button'
-import { ProbabilityBadge } from '@/components/ui/ProbabilityBadge'
-import { ChevronDown } from 'lucide-react'
+import { useState } from 'react';
+import { Star, ChevronDown, ChevronUp, Plus, Sparkles } from 'lucide-react';
+import { cn, formatProbability, formatCategory } from '@/lib/utils';
+import { ProbabilityBadge } from '@/components/ui/ProbabilityBadge';
+import { Button } from '@/components/ui/Button';
+import { useBuilderStore } from '@/stores/builder.store';
+import type { Pick } from '@/types';
 
 interface PickCardProps {
-  id: string
-  rank: number
-  marketName: string
-  category: string
-  probability: number
-  isValueBet?: boolean
-  explanation?: string
-  variant?: 'light' | 'dark'
-  featured?: boolean
+  pick: Pick;
+  variant?: 'light' | 'dark';
+  showEvent?: boolean;
+  className?: string;
 }
 
 export function PickCard({
-  id,
-  rank,
-  marketName,
-  category,
-  probability,
-  isValueBet = false,
-  explanation,
+  pick,
   variant = 'light',
-  featured = false,
+  showEvent = false,
+  className,
 }: PickCardProps) {
-  const [isExpanded, setIsExpanded] = useState(false)
-  const { addSelection } = useBuilderStore()
-
-  const handleAddToBuilder = () => {
-    addSelection({
-      id,
-      marketName,
-      category,
-      probability,
-      isValueBet,
-    })
-  }
-
-  const isDark = variant === 'dark'
-  const isRankOne = rank === 1
-
-  const containerClass = cn(
-    'rounded-lg p-5 transition-all',
-    isDark ? 'bg-dark-charcoal' : 'bg-warm-white',
-    isRankOne && !isDark && 'border-2 border-oracle-gold shadow-glow',
-    !isRankOne && isDark && 'border border-dark-graphite',
-    !isRankOne && !isDark && 'border border-warm-sand',
-    featured && !isDark && 'overflow-hidden'
-  )
-
-  const gradientStyle = featured
-    ? {
-        backgroundImage:
-          'linear-gradient(135deg, rgba(255, 214, 0, 0.05) 0%, rgba(255, 214, 0, 0.02) 100%)',
-      }
-    : {}
+  const [expanded, setExpanded] = useState(false);
+  const addToBuilder = useBuilderStore((s) => s.add);
+  const isDark = variant === 'dark';
 
   return (
-    <div className={containerClass} style={gradientStyle}>
+    <div
+      className={cn(
+        'rounded-oracle-md border p-5 transition-all duration-normal',
+        isDark
+          ? 'border-dark-slate bg-dark-charcoal text-txt-inverse'
+          : 'border-warm-sand bg-white',
+        pick.rank === 1 && !isDark && 'border-oracle-gold/30 shadow-glow',
+        pick.rank === 1 && isDark && 'border-oracle-gold/40 shadow-glow',
+        className,
+      )}
+      style={
+        pick.rank === 1 && !isDark
+          ? { background: 'linear-gradient(135deg, var(--color-warm-white, #FAF8F5) 0%, rgba(200,164,78,0.06) 100%)' }
+          : undefined
+      }
+    >
       {/* Header */}
-      <div className="flex items-start justify-between mb-4">
-        <div className="flex items-baseline gap-3">
-          <span
-            className={cn(
-              'text-3xl font-bold',
-              isRankOne && !isDark ? 'text-oracle-gold' : 'text-txt-primary'
-            )}
-          >
-            {rank}
-          </span>
+      <div className="mb-3 flex items-start justify-between">
+        <div className="flex items-center gap-2">
+          {pick.rank === 1 && (
+            <Star className="h-5 w-5 fill-oracle-gold text-oracle-gold" />
+          )}
           <div>
-            <h3
-              className={cn(
-                'font-bold text-lg',
-                isDark ? 'text-txt-inverse' : 'text-txt-primary'
+            <p className={cn(
+              'font-display text-heading tracking-tight',
+              isDark ? 'text-txt-inverse' : 'text-txt-primary',
+            )}>
+              {pick.market.name}
+            </p>
+            <p className={cn(
+              'text-caption',
+              isDark ? 'text-txt-inverse-2' : 'text-txt-tertiary',
+            )}>
+              {formatCategory(pick.market.category)}
+              {pick.market.isValueBet && (
+                <span className="ml-2 inline-flex items-center gap-1 text-value">
+                  <Sparkles className="h-3 w-3" /> Value Bet
+                </span>
               )}
-            >
-              {marketName}
-            </h3>
-            <p
-              className={cn(
-                'text-xs font-medium uppercase tracking-wide',
-                isDark ? 'text-txt-inverse-2' : 'text-txt-inverse-2'
-              )}
-            >
-              {category}
             </p>
           </div>
         </div>
+
         <ProbabilityBadge
-          probability={probability}
-          size="md"
-          isValueBet={isValueBet}
+          probability={pick.probability}
+          isValueBet={pick.market.isValueBet}
+          size="lg"
         />
       </div>
 
-      {/* Value Bet Indicator */}
-      {isValueBet && (
-        <div className="mb-3 inline-block px-2 py-1 bg-oracle-gold/10 rounded text-xs font-semibold text-oracle-gold-dark">
-          Value Bet
+      {/* Event info (when showing across events) */}
+      {showEvent && pick.event && (
+        <div className={cn(
+          'mb-3 rounded-oracle-sm px-3 py-2 text-body-sm',
+          isDark ? 'bg-dark-graphite' : 'bg-warm-cream',
+        )}>
+          {pick.event.homeTeam.shortName || pick.event.homeTeam.name} vs{' '}
+          {pick.event.awayTeam.shortName || pick.event.awayTeam.name}
+          <span className={cn('ml-2', isDark ? 'text-txt-inverse-2' : 'text-txt-tertiary')}>
+            {pick.event.league.name}
+          </span>
         </div>
       )}
 
-      {/* Explanation Toggle */}
-      {explanation && (
-        <button
-          onClick={() => setIsExpanded(!isExpanded)}
-          className={cn(
-            'w-full flex items-center justify-between px-3 py-2 rounded-lg mb-4 transition-colors',
-            isDark
-              ? 'hover:bg-dark-graphite text-txt-inverse'
-              : 'hover:bg-warm-white/50 text-txt-primary'
-          )}
-        >
-          <span className="text-sm font-medium">Why this pick?</span>
-          <ChevronDown
-            className={cn('w-4 h-4 transition-transform', isExpanded && 'rotate-180')}
-          />
-        </button>
-      )}
-
-      {/* Expanded Explanation */}
-      {isExpanded && explanation && (
-        <div
-          className={cn(
-            'mb-4 p-3 rounded-lg text-sm leading-relaxed',
-            isDark
-              ? 'bg-dark-graphite text-txt-inverse-2'
-              : 'bg-warm-white/50 text-txt-inverse-2'
-          )}
-        >
-          {explanation}
-        </div>
-      )}
-
-      {/* Add to Builder Button */}
-      <Button
-        variant="gold"
-        size="sm"
-        onClick={handleAddToBuilder}
-        className="w-full"
+      {/* Explanation toggle */}
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className={cn(
+          'flex w-full items-center gap-1 text-body-sm font-medium transition-colors',
+          isDark
+            ? 'text-txt-inverse-2 hover:text-txt-inverse'
+            : 'text-txt-secondary hover:text-txt-primary',
+        )}
       >
-        Add to Builder
-      </Button>
+        {expanded ? (
+          <>
+            <ChevronUp className="h-4 w-4" /> Hide reasoning
+          </>
+        ) : (
+          <>
+            <ChevronDown className="h-4 w-4" /> Why this pick?
+          </>
+        )}
+      </button>
+
+      {/* Explanation */}
+      {expanded && pick.explanation && (
+        <div className={cn(
+          'mt-3 rounded-oracle-sm p-4 text-body-sm leading-relaxed animate-slide-up',
+          isDark ? 'bg-dark-graphite text-txt-inverse-2' : 'bg-warm-cream text-txt-secondary',
+        )}>
+          {pick.explanation}
+        </div>
+      )}
+
+      {/* Add to Builder */}
+      <div className="mt-4 flex justify-end">
+        <Button
+          variant={isDark ? 'gold' : 'primary'}
+          size="sm"
+          onClick={() => addToBuilder(pick.market.id)}
+        >
+          <Plus className="h-4 w-4" />
+          Add to Builder
+        </Button>
+      </div>
     </div>
-  )
+  );
 }

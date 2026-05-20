@@ -1,260 +1,264 @@
 import Link from 'next/link';
-import { ArrowRight, TrendingUp, Target, Zap } from 'lucide-react';
+import {
+  Trophy,
+  ArrowRight,
+  BarChart3,
+  Brain,
+  Layers,
+  Shield,
+  TrendingUp,
+  Zap,
+} from 'lucide-react';
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen surface-warm">
-      {/* Navigation */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-[#f9f7f3]/95 backdrop-blur-sm border-b border-[#e5dfd6]">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-[#d4a574] rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">O</span>
+    <div className="min-h-screen">
+      {/* ─── Nav ─── */}
+      <nav className="fixed top-0 left-0 right-0 z-50 border-b border-warm-sand/60 bg-warm-white/80 backdrop-blur-md">
+        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-oracle-sm bg-dark-ink">
+              <Trophy className="h-5 w-5 text-oracle-gold" />
             </div>
-            <span className="text-lg font-bold text-[#1a1815]">OraQL_</span>
+            <span className="font-display text-display-sm tracking-tight text-dark-ink">
+              OraQL_
+            </span>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             <Link
-              href="/auth?mode=login"
-              className="text-[#1a1815] hover:text-[#d4a574] transition-colors font-medium"
+              href="/auth"
+              className="text-body-sm font-medium text-txt-secondary transition-colors hover:text-txt-primary"
             >
               Sign In
             </Link>
             <Link
               href="/auth?mode=register"
-              className="px-6 py-2 bg-[#1a1815] text-[#f9f7f3] rounded-lg hover:bg-[#2a2520] transition-colors font-medium"
+              className="inline-flex items-center gap-2 rounded-oracle-sm bg-dark-ink px-4 py-2 text-body-sm font-semibold text-txt-inverse transition-all hover:bg-dark-charcoal"
             >
               Get Started
+              <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
         </div>
       </nav>
 
-      {/* Hero Section */}
-      <section className="relative pt-32 pb-20 overflow-hidden">
-        <div className="absolute top-20 right-10 deco-letter warm">O</div>
-        <div className="max-w-7xl mx-auto px-6 relative z-10">
-          <div className="max-w-3xl">
-            <h1 className="text-5xl md:text-6xl font-bold text-[#1a1815] mb-6 leading-tight">
-              Smarter bets start with better data
-            </h1>
-            <p className="text-xl text-[#3a3530] mb-8 font-light">
-              OraQL_ combines advanced analytics, real-time market data, and predictive intelligence
-              to transform how you make betting decisions.
-            </p>
-            <div className="flex gap-4">
-              <Link
-                href="/auth?mode=register"
-                className="inline-flex items-center gap-2 px-8 py-3 bg-[#1a1815] text-[#f9f7f3] rounded-lg hover:bg-[#2a2520] transition-colors font-medium"
-              >
-                Start Free Trial
-                <ArrowRight size={18} />
-              </Link>
-              <button className="px-8 py-3 border-2 border-[#1a1815] text-[#1a1815] rounded-lg hover:bg-[#f5f1e8] transition-colors font-medium">
-                Watch Demo
-              </button>
-            </div>
+      {/* ─── Hero (Warm Cream Surface) ─── */}
+      <section className="relative overflow-hidden bg-warm-cream pt-32 pb-20">
+        <span
+          className="pointer-events-none absolute -right-16 -top-20 select-none font-display font-bold text-warm-sand"
+          style={{ fontSize: '32rem', lineHeight: '0.8', opacity: 0.5 }}
+        >
+          O
+        </span>
+        <div className="relative z-10 mx-auto max-w-6xl px-6">
+          <div className="inline-flex items-center gap-2 rounded-full border border-warm-stone bg-warm-white px-4 py-1.5 text-caption font-semibold uppercase tracking-widest text-oracle-gold-dark">
+            <Zap className="h-3 w-3" />
+            Probability-Driven Intelligence
           </div>
-        </div>
-      </section>
 
-      {/* How It Works */}
-      <section className="bg-[#1a1815] py-20">
-        <div className="max-w-7xl mx-auto px-6">
-          <h2 className="text-4xl font-bold text-[#f9f7f3] mb-16 text-center">How It Works</h2>
-          <div className="grid md:grid-cols-3 gap-8">
-            {/* Step 1 */}
-            <div className="bg-[#2a2520] p-8 rounded-lg">
-              <div className="w-12 h-12 bg-[#d4a574] rounded-lg flex items-center justify-center text-[#1a1815] font-bold text-lg mb-4">
-                1
-              </div>
-              <h3 className="text-xl font-bold text-[#f9f7f3] mb-3">Connect Your Data</h3>
-              <p className="text-[#b8b0a5] font-light">
-                Integrate your betting accounts and configure your preferred sports and markets.
-              </p>
-            </div>
+          <h1 className="mt-6 max-w-3xl font-display text-display-xl tracking-tight text-dark-ink">
+            Smarter bets start with{' '}
+            <span className="text-oracle-gradient">better data.</span>
+          </h1>
 
-            {/* Step 2 */}
-            <div className="bg-[#2a2520] p-8 rounded-lg">
-              <div className="w-12 h-12 bg-[#d4a574] rounded-lg flex items-center justify-center text-[#1a1815] font-bold text-lg mb-4">
-                2
-              </div>
-              <h3 className="text-xl font-bold text-[#f9f7f3] mb-3">Get Smart Picks</h3>
-              <p className="text-[#b8b0a5] font-light">
-                Receive AI-powered betting recommendations with confidence scores and detailed analysis.
-              </p>
-            </div>
-
-            {/* Step 3 */}
-            <div className="bg-[#2a2520] p-8 rounded-lg">
-              <div className="w-12 h-12 bg-[#d4a574] rounded-lg flex items-center justify-center text-[#1a1815] font-bold text-lg mb-4">
-                3
-              </div>
-              <h3 className="text-xl font-bold text-[#f9f7f3] mb-3">Track & Optimize</h3>
-              <p className="text-[#b8b0a5] font-light">
-                Monitor your results and refine your strategy with real-time performance analytics.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Features */}
-      <section className="py-20 surface-warm">
-        <div className="max-w-7xl mx-auto px-6">
-          <h2 className="text-4xl font-bold text-[#1a1815] mb-16 text-center">Powerful Features</h2>
-          <div className="grid md:grid-cols-3 gap-8">
-            {/* Feature 1 */}
-            <div className="bg-white rounded-lg p-8 border border-[#e5dfd6]">
-              <TrendingUp className="w-8 h-8 text-[#d4a574] mb-4" />
-              <h3 className="text-lg font-bold text-[#1a1815] mb-2">Live Market Analysis</h3>
-              <p className="text-[#3a3530] font-light">
-                Real-time odds tracking and market movement analysis across all major sportsbooks.
-              </p>
-            </div>
-
-            {/* Feature 2 */}
-            <div className="bg-white rounded-lg p-8 border border-[#e5dfd6]">
-              <Target className="w-8 h-8 text-[#d4a574] mb-4" />
-              <h3 className="text-lg font-bold text-[#1a1815] mb-2">Precision Predictions</h3>
-              <p className="text-[#3a3530] font-light">
-                Machine learning models trained on millions of historical outcomes for accurate forecasts.
-              </p>
-            </div>
-
-            {/* Feature 3 */}
-            <div className="bg-white rounded-lg p-8 border border-[#e5dfd6]">
-              <Zap className="w-8 h-8 text-[#d4a574] mb-4" />
-              <h3 className="text-lg font-bold text-[#1a1815] mb-2">Instant Alerts</h3>
-              <p className="text-[#3a3530] font-light">
-                Get notified immediately when high-confidence opportunities match your criteria.
-              </p>
-            </div>
-
-            {/* Feature 4 */}
-            <div className="bg-white rounded-lg p-8 border border-[#e5dfd6]">
-              <TrendingUp className="w-8 h-8 text-[#d4a574] mb-4" />
-              <h3 className="text-lg font-bold text-[#1a1815] mb-2">Performance Tracking</h3>
-              <p className="text-[#3a3530] font-light">
-                Comprehensive dashboards showing ROI, win rate, and detailed performance metrics.
-              </p>
-            </div>
-
-            {/* Feature 5 */}
-            <div className="bg-white rounded-lg p-8 border border-[#e5dfd6]">
-              <Target className="w-8 h-8 text-[#d4a574] mb-4" />
-              <h3 className="text-lg font-bold text-[#1a1815] mb-2">Smart Filters</h3>
-              <p className="text-[#3a3530] font-light">
-                Advanced filtering by sport, league, probability range, and custom criteria.
-              </p>
-            </div>
-
-            {/* Feature 6 */}
-            <div className="bg-white rounded-lg p-8 border border-[#e5dfd6]">
-              <Zap className="w-8 h-8 text-[#d4a574] mb-4" />
-              <h3 className="text-lg font-bold text-[#1a1815] mb-2">Custom Builder</h3>
-              <p className="text-[#3a3530] font-light">
-                Build custom parlays and multi-leg bets with combined probability calculations.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="bg-[#2a2520] py-20">
-        <div className="max-w-4xl mx-auto px-6 text-center">
-          <h2 className="text-4xl font-bold text-[#f9f7f3] mb-6">Ready to elevate your betting game?</h2>
-          <p className="text-lg text-[#b8b0a5] mb-8 font-light">
-            Join thousands of bettors making smarter decisions with OraQL_.
+          <p className="mt-6 max-w-xl text-body-lg leading-relaxed text-txt-secondary">
+            OraQL_ analyses every market, every match — computing probabilities from
+            real match data, surfacing value bets, and explaining its reasoning in
+            plain language.
           </p>
-          <Link
-            href="/auth?mode=register"
-            className="inline-flex items-center gap-2 px-8 py-4 bg-[#d4a574] text-[#1a1815] rounded-lg hover:bg-[#c99465] transition-colors font-bold text-lg"
-          >
-            Start Your Free Trial
-            <ArrowRight size={20} />
-          </Link>
+
+          <div className="mt-10 flex flex-wrap items-center gap-4">
+            <Link
+              href="/auth?mode=register"
+              className="inline-flex items-center gap-2 rounded-oracle-md bg-oracle-gold px-6 py-3 font-display text-body-lg font-semibold text-dark-ink transition-all hover:bg-oracle-gold-light hover:shadow-glow"
+            >
+              Start Free
+              <ArrowRight className="h-5 w-5" />
+            </Link>
+            <Link
+              href="/auth"
+              className="inline-flex items-center gap-2 rounded-oracle-md border border-warm-stone bg-warm-white px-6 py-3 font-display text-body-lg font-medium text-txt-primary transition-all hover:bg-warm-cream hover:border-warm-taupe"
+            >
+              Sign In
+            </Link>
+          </div>
+
+          <div className="mt-12 flex flex-wrap gap-8 text-body-sm text-txt-tertiary">
+            <span>
+              <strong className="text-txt-secondary">10+</strong> leagues covered
+            </span>
+            <span>
+              <strong className="text-txt-secondary">6</strong> market categories
+            </span>
+            <span>
+              <strong className="text-txt-secondary">Poisson</strong> probability engine
+            </span>
+          </div>
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="bg-[#1a1815] text-[#b8b0a5] py-12 border-t border-[#2a2520]">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="grid md:grid-cols-4 gap-8 mb-8">
-            <div>
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-6 h-6 bg-[#d4a574] rounded-lg flex items-center justify-center">
-                  <span className="text-[#1a1815] font-bold text-xs">O</span>
+      {/* ─── How It Works (Dark Ink Surface) ─── */}
+      <section className="bg-dark-ink py-20">
+        <div className="mx-auto max-w-6xl px-6">
+          <span
+            className="pointer-events-none absolute right-0 select-none font-display font-bold text-white"
+            style={{ fontSize: '20rem', lineHeight: '0.8', opacity: 0.03 }}
+          >
+            H
+          </span>
+          <p className="text-caption font-semibold uppercase tracking-widest text-oracle-gold">
+            How It Works
+          </p>
+          <h2 className="mt-2 font-display text-display-md tracking-tight text-txt-inverse">
+            From data to decisions in three steps
+          </h2>
+
+          <div className="mt-12 grid gap-6 md:grid-cols-3">
+            {[
+              {
+                step: '01',
+                icon: BarChart3,
+                title: 'Ingest & Analyse',
+                desc: 'OraQL_ pulls fixtures, stats, lineups, and odds from live data providers — then computes weighted averages across the last 10 matches.',
+              },
+              {
+                step: '02',
+                icon: Brain,
+                title: 'Compute Probabilities',
+                desc: 'A Poisson-based engine calculates over/under, match result, corners, cards, and BTTS probabilities with recency weighting and injury adjustments.',
+              },
+              {
+                step: '03',
+                icon: TrendingUp,
+                title: 'Surface Value',
+                desc: 'OraQL_ compares its computed probability against bookmaker implied odds — flagging bets with 10%+ value gaps and explaining why.',
+              },
+            ].map((item) => (
+              <div
+                key={item.step}
+                className="group rounded-oracle-lg border border-dark-graphite bg-dark-charcoal p-6 transition-all hover:border-dark-slate"
+              >
+                <div className="mb-4 flex items-center gap-3">
+                  <span className="font-mono text-caption font-bold text-oracle-gold">
+                    {item.step}
+                  </span>
+                  <div className="flex h-10 w-10 items-center justify-center rounded-oracle-sm bg-oracle-gold/15">
+                    <item.icon className="h-5 w-5 text-oracle-gold" />
+                  </div>
                 </div>
-                <span className="font-bold text-[#f9f7f3]">OraQL_</span>
+                <h3 className="font-display text-heading tracking-tight text-txt-inverse">
+                  {item.title}
+                </h3>
+                <p className="mt-2 text-body-sm leading-relaxed text-txt-inverse-2">
+                  {item.desc}
+                </p>
               </div>
-              <p className="text-sm font-light">Sports betting intelligence, redefined.</p>
-            </div>
-            <div>
-              <h4 className="font-bold text-[#f9f7f3] mb-3">Product</h4>
-              <ul className="space-y-2 text-sm">
-                <li>
-                  <a href="#" className="hover:text-[#d4a574] transition-colors">
-                    Features
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="hover:text-[#d4a574] transition-colors">
-                    Pricing
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="hover:text-[#d4a574] transition-colors">
-                    API
-                  </a>
-                </li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-bold text-[#f9f7f3] mb-3">Company</h4>
-              <ul className="space-y-2 text-sm">
-                <li>
-                  <a href="#" className="hover:text-[#d4a574] transition-colors">
-                    About
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="hover:text-[#d4a574] transition-colors">
-                    Blog
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="hover:text-[#d4a574] transition-colors">
-                    Contact
-                  </a>
-                </li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-bold text-[#f9f7f3] mb-3">Legal</h4>
-              <ul className="space-y-2 text-sm">
-                <li>
-                  <a href="#" className="hover:text-[#d4a574] transition-colors">
-                    Privacy Policy
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="hover:text-[#d4a574] transition-colors">
-                    Terms of Service
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="hover:text-[#d4a574] transition-colors">
-                    Disclaimer
-                  </a>
-                </li>
-              </ul>
-            </div>
+            ))}
           </div>
-          <div className="border-t border-[#2a2520] pt-8 text-center text-sm">
-            <p>© 2024 OraQL_. All rights reserved.</p>
+        </div>
+      </section>
+
+      {/* ─── Features (Warm White Surface) ─── */}
+      <section className="bg-warm-white py-20">
+        <div className="mx-auto max-w-6xl px-6">
+          <p className="text-caption font-semibold uppercase tracking-widest text-oracle-gold-dark">
+            Features
+          </p>
+          <h2 className="mt-2 font-display text-display-md tracking-tight">
+            Everything you need to bet smarter
+          </h2>
+
+          <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {[
+              {
+                icon: TrendingUp,
+                title: 'OraQL_ Picks',
+                desc: 'Ranked predictions across every match, sorted by confidence — the top picks surfaced automatically.',
+              },
+              {
+                icon: Layers,
+                title: 'Bet Builder',
+                desc: 'Combine selections from multiple events. See your combined probability update in real time.',
+              },
+              {
+                icon: Brain,
+                title: 'Transparent Reasoning',
+                desc: 'Every probability comes with a plain-language explanation — stats, trends, and injury context.',
+              },
+              {
+                icon: Zap,
+                title: 'Value Bet Detection',
+                desc: 'Automatic detection of markets where OraQL_\'s probability diverges 10%+ from bookmaker odds.',
+              },
+              {
+                icon: BarChart3,
+                title: 'Market Analysis',
+                desc: 'Goals, corners, cards, match result, BTTS — six market categories analysed per event.',
+              },
+              {
+                icon: Shield,
+                title: 'Real-Time Updates',
+                desc: 'Probabilities refresh when lineups are confirmed. Live push via WebSocket — no manual refresh.',
+              },
+            ].map((feature) => (
+              <div
+                key={feature.title}
+                className="rounded-oracle-md border border-warm-sand bg-warm-cream/50 p-6 transition-all hover:border-warm-stone hover:shadow-card"
+              >
+                <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-oracle-sm bg-oracle-gold/10">
+                  <feature.icon className="h-5 w-5 text-oracle-gold-dark" />
+                </div>
+                <h3 className="font-display text-heading tracking-tight">
+                  {feature.title}
+                </h3>
+                <p className="mt-2 text-body-sm leading-relaxed text-txt-secondary">
+                  {feature.desc}
+                </p>
+              </div>
+            ))}
           </div>
+        </div>
+      </section>
+
+      {/* ─── CTA (Dark Charcoal Surface) ─── */}
+      <section className="relative overflow-hidden bg-dark-charcoal py-20">
+        <span
+          className="pointer-events-none absolute -left-10 -bottom-10 select-none font-display font-bold text-white"
+          style={{ fontSize: '20rem', lineHeight: '0.8', opacity: 0.03 }}
+        >
+          G
+        </span>
+        <div className="relative z-10 mx-auto max-w-2xl px-6 text-center">
+          <h2 className="font-display text-display-md tracking-tight text-txt-inverse">
+            Ready to see the numbers?
+          </h2>
+          <p className="mt-4 text-body-lg text-txt-inverse-2">
+            Create your free account and start exploring OraQL_&apos;s probability engine today.
+          </p>
+          <div className="mt-8 flex justify-center gap-4">
+            <Link
+              href="/auth?mode=register"
+              className="inline-flex items-center gap-2 rounded-oracle-md bg-oracle-gold px-6 py-3 font-display text-body-lg font-semibold text-dark-ink transition-all hover:bg-oracle-gold-light hover:shadow-glow"
+            >
+              Get Started Free
+              <ArrowRight className="h-5 w-5" />
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* ─── Footer (Dark Ink Surface) ─── */}
+      <footer className="border-t border-dark-graphite bg-dark-ink py-10">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-6">
+          <div className="flex items-center gap-2">
+            <Trophy className="h-4 w-4 text-oracle-gold" />
+            <span className="font-display text-body-sm font-semibold text-txt-inverse">
+              OraQL_
+            </span>
+          </div>
+          <p className="text-caption text-txt-inverse-2">
+            OraQL_ does not place bets or handle money. Use responsibly.
+          </p>
         </div>
       </footer>
     </div>

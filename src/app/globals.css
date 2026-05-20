@@ -2,99 +2,99 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --color-warm-white: #f9f7f3;
-  --color-cream: #faf8f3;
-  --color-sand: #f5f1e8;
-  --color-dark-ink: #1a1815;
-  --color-charcoal: #2a2520;
-  --color-graphite: #3a3530;
-  --color-oracle-gold: #d4a574;
-}
+/* ─── OraQL_ Design System v2: Global Styles ─── */
+/* Fonts loaded via next/font/google in layout.tsx — no CSS @import needed */
 
-/* Surface Classes */
-.surface-warm {
-  @apply bg-[#f9f7f3];
-}
-
-.surface-cream {
-  @apply bg-[#faf8f3];
-}
-
-.surface-dark {
-  @apply bg-[#2a2520];
-}
-
-.surface-charcoal {
-  @apply bg-[#1a1815];
-}
-
-/* Deco Letter Class */
-.deco-letter {
-  @apply text-[20rem] font-bold opacity-0 pointer-events-none absolute;
-}
-
-.deco-letter.warm {
-  @apply opacity-[0.06] text-[#1a1815];
-}
-
-.deco-letter.dark {
-  @apply opacity-[0.04] text-white;
-}
-
-/* Probability Badge Classes */
-.prob-high {
-  @apply bg-green-100 text-green-900 border border-green-300;
-}
-
-.prob-mid {
-  @apply bg-yellow-100 text-yellow-900 border border-yellow-300;
-}
-
-.prob-low {
-  @apply bg-red-100 text-red-900 border border-red-300;
-}
-
-.prob-value {
-  @apply font-mono text-sm font-bold;
-}
-
-/* Live Dot Animation */
-@keyframes pulse-dot {
-  0%,
-  100% {
-    opacity: 1;
+@layer base {
+  :root {
+    --color-warm-white: #FAF8F5;
+    --color-warm-cream: #F0ECE4;
+    --color-warm-sand: #E5DFD3;
+    --color-dark-ink: #1A1A1E;
+    --color-dark-charcoal: #222226;
+    --color-dark-graphite: #2C2C32;
+    --color-oracle-gold: #C8A44E;
   }
-  50% {
-    opacity: 0.5;
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply font-body bg-warm-white text-txt-primary;
+  }
+
+  ::selection {
+    background: #C8A44E;
+    color: #1A1A1E;
   }
 }
 
-.live-dot {
-  @apply inline-block w-2 h-2 rounded-full bg-green-500 animate-pulse;
+@layer components {
+  /* ─── Surface variants ─── */
+  .surface-warm {
+    @apply bg-warm-white text-txt-primary;
+  }
+  .surface-cream {
+    @apply bg-warm-cream text-txt-primary;
+  }
+  .surface-dark {
+    @apply bg-dark-ink text-txt-inverse;
+  }
+  .surface-charcoal {
+    @apply bg-dark-charcoal text-txt-inverse;
+  }
+
+  /* ─── Decorative background letter ─── */
+  .deco-letter {
+    @apply absolute font-display font-bold pointer-events-none select-none;
+    font-size: 20rem;
+    line-height: 0.8;
+    opacity: 0.06;
+  }
+  .surface-dark .deco-letter,
+  .bg-dark-ink .deco-letter {
+    opacity: 0.04;
+    color: white;
+  }
+
+  /* ─── Probability badge colors ─── */
+  .prob-high {
+    @apply bg-prob-high/10 text-prob-high border border-prob-high/20;
+  }
+  .prob-mid {
+    @apply bg-prob-mid/10 text-prob-mid border border-prob-mid/20;
+  }
+  .prob-low {
+    @apply bg-dark-ash/10 text-txt-tertiary border border-dark-ash/20;
+  }
+  .prob-value {
+    @apply bg-value/10 text-value border border-value/20;
+  }
+
+  /* ─── Live indicator ─── */
+  .live-dot {
+    @apply w-2 h-2 rounded-full bg-live animate-pulse-live;
+  }
 }
 
-/* Text Oracle Gradient */
-.text-oracle-gradient {
-  @apply bg-gradient-to-r from-[#d4a574] to-[#c99465] bg-clip-text text-transparent;
-}
+@layer utilities {
+  /* ─── OraQL_ gold gradient text ─── */
+  .text-oracle-gradient {
+    background: linear-gradient(135deg, #DBBF6F 0%, #C8A44E 50%, #A88A3A 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
 
-/* Scrollbar Hide */
-.scrollbar-hide {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-
-.scrollbar-hide::-webkit-scrollbar {
-  display: none;
-}
-
-/* Smooth Scrolling */
-html {
-  @apply scroll-smooth;
-}
-
-/* Body Defaults */
-body {
-  @apply antialiased;
+  /* ─── Scrollbar styling ─── */
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
 }

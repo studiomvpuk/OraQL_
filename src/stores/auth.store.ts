@@ -1,93 +1,82 @@
+'use client';
+
 import { create } from 'zustand';
-import { api, ApiError } from '@/lib/api';
+import { api } from '@/lib/api';
 import type { User, TokenPair } from '@/types';
 
 interface AuthState {
   user: User | null;
-  isLoading: boolean;
-  error: string | null;
   isAuthenticated: boolean;
+  isLoading: boolean;
 
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, username: string, firstName?: string, lastName?: string) => Promise<void>;
+  register: (data: {
+    email: string;
+    password: string;
+    firstName?: string;
+    lastName?: string;
+  }) => Promise<void>;
   logout: () => Promise<void>;
   loadUser: () => Promise<void>;
   setTokens: (tokens: TokenPair) => void;
-  clearError: () => void;
 }
 
-export const useAuthStore = create<AuthState>((set, get) => ({
+export const useAuthStore = create<AuthState>((set) => ({
   user: null,
-  isLoading: false,
-  error: null,
   isAuthenticated: false,
+  isLoading: true,
 
-  setTokens: (tokens: TokenPair) => {
+  login: async (email, password) => {
+    const tokens = await api.post<TokenPair>('/auth/login', { email, password });
     api.setToken(tokens.accessToken);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('oracle_refresh', tokens.refreshToken);
+    }
+    const user = await api.get<User>('/users/me');
+    set({ user, isAuthenticated: true });
   },
 
-  login: async (email: string, password: string) => {
-    set({ isLoading: true, error: null });
-    try {
-      const response = await api.post<{ user: User; tokens: TokenPair }>('/auth/login', {
-        email,
-        password,
-      });
-      get().setTokens(response.tokens);
-      set({ user: response.user, isAuthenticated: true, isLoading: false });
-    } catch (error) {
-      const message = error instanceof ApiError ? error.message : 'Login failed';
-      set({ error: message, isLoading: false, isAuthenticated: false });
-      throw error;
+  register: async (data) => {
+    const tokens = await api.post<TokenPair>('/auth/register', data);
+    api.setToken(tokens.accessToken);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('oracle_refresh', tokens.refreshToken);
     }
-  },
-
-  register: async (email: string, password: string, username: string, firstName?: string, lastName?: string) => {
-    set({ isLoading: true, error: null });
-    try {
-      const response = await api.post<{ user: User; tokens: TokenPair }>('/auth/register', {
-        email,
-        password,
-        username,
-        firstName,
-        lastName,
-      });
-      get().setTokens(response.tokens);
-      set({ user: response.user, isAuthenticated: true, isLoading: false });
-    } catch (error) {
-      const message = error instanceof ApiError ? error.message : 'Registration failed';
-      set({ error: message, isLoading: false, isAuthenticated: false });
-      throw error;
-    }
+    const user = await api.get<User>('/users/me');
+    set({ user, isAuthenticated: true });
   },
 
   logout: async () => {
-    set({ isLoading: true, error: null });
     try {
-      await api.post('/auth/logout', {});
-      api.setToken(null);
-      set({ user: null, isAuthenticated: false, isLoading: false });
-    } catch (error) {
-      const message = error instanceof ApiError ? error.message : 'Logout failed';
-      set({ error: message, isLoading: false });
-      throw error;
+      await api.post('/auth/logout');
+    } catch {
+      // ignore
     }
+    api.setToken(null);
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('oracle_refresh');
+    }
+    set({ user: null, isAuthenticated: false });
   },
 
   loadUser: async () => {
-    set({ isLoading: true, error: null });
     try {
-      const user = await api.get<User>('/auth/me');
+      const token = api.getToken();
+      if (!token) {
+        set({ isLoading: false });
+        return;
+      }
+      const user = await api.get<User>('/users/me');
       set({ user, isAuthenticated: true, isLoading: false });
-    } catch (error) {
-      api.setToken(null);
-      const message = error instanceof ApiError ? error.message : 'Failed to load user';
-      set({ error: message, user: null, isAuthenticated: false, isLoading: false });
-      throw error;
+    } catch {
+      set({ user: null, isAuthenticated: false, isLoading: false });
     }
   },
 
-  clearError: () => {
-    set({ error: null });
+  setTokens: (tokens) => {
+    api.setToken(tokens.accessToken);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('oracle_refresh', tokens.refreshToken);
+    }
   },
 }));

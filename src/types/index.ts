@@ -1,172 +1,180 @@
-export enum Sport {
-  FOOTBALL = 'FOOTBALL',
-  BASKETBALL = 'BASKETBALL',
-  TENNIS = 'TENNIS',
-  CRICKET = 'CRICKET',
-  BASEBALL = 'BASEBALL',
-  HOCKEY = 'HOCKEY',
-}
+// ─── OraQL_ Frontend Type Definitions ───
+// Mirrors the backend Prisma models for type safety.
 
-export enum EventStatus {
-  SCHEDULED = 'SCHEDULED',
-  LIVE = 'LIVE',
-  COMPLETED = 'COMPLETED',
-  CANCELLED = 'CANCELLED',
-  POSTPONED = 'POSTPONED',
-}
+export type Sport = 'FOOTBALL' | 'BASKETBALL' | 'TENNIS' | 'CRICKET' | 'BASEBALL' | 'HOCKEY';
 
-export enum MarketCategory {
-  MATCH_RESULT = 'MATCH_RESULT',
-  GOALS = 'GOALS',
-  CORNERS = 'CORNERS',
-  CARDS = 'CARDS',
-  PLAYER = 'PLAYER',
-  HALFTIME = 'HALFTIME',
-  HANDICAP = 'HANDICAP',
-  SPECIAL = 'SPECIAL',
-}
+export type EventStatus =
+  | 'SCHEDULED'
+  | 'LINEUP_CONFIRMED'
+  | 'LIVE'
+  | 'HALF_TIME'
+  | 'FINISHED'
+  | 'POSTPONED'
+  | 'CANCELLED'
+  | 'SUSPENDED';
+
+export type MarketCategory =
+  | 'MATCH_RESULT'
+  | 'GOALS'
+  | 'CORNERS'
+  | 'CARDS'
+  | 'PLAYER'
+  | 'HALFTIME'
+  | 'HANDICAP'
+  | 'SPECIAL';
 
 export interface User {
   id: string;
-  username: string;
   email: string;
   firstName?: string;
   lastName?: string;
-  avatar?: string;
-  createdAt: string;
-  updatedAt: string;
+  avatarUrl?: string;
+  role: 'USER' | 'PREMIUM' | 'ADMIN';
+  preferredSports: Sport[];
+  timezone: string;
 }
 
 export interface Team {
   id: string;
   name: string;
-  code: string;
-  logo?: string;
-  sport: Sport;
+  shortName?: string;
+  logoUrl?: string;
 }
 
 export interface League {
   id: string;
   name: string;
-  code: string;
-  sport: Sport;
   country?: string;
+  logoUrl?: string;
+  eventCount?: number;
 }
 
 export interface Event {
   id: string;
-  title: string;
-  sport: Sport;
+  league: League;
   homeTeam: Team;
   awayTeam: Team;
-  league: League;
-  kickoffTime: string;
+  sport: Sport;
   status: EventStatus;
-  createdAt: string;
-  updatedAt: string;
+  kickoffAt: string;
+  venue?: string;
+  round?: string;
+  homeScore?: number;
+  awayScore?: number;
+  picks?: PickSummary[];
 }
 
 export interface EventDetail extends Event {
-  stats?: MatchStat[];
-  lineups?: Lineup[];
+  markets: Market[];
+  picks: Pick[];
+  lineups: Lineup[];
+  matchStats: MatchStat[];
 }
 
 export interface Market {
   id: string;
-  eventId: string;
   category: MarketCategory;
   name: string;
-  description?: string;
-  picks: Pick[];
-  createdAt: string;
-  updatedAt: string;
+  shortName?: string;
+  line?: number;
+  probability: number;
+  confidence: number;
+  impliedProbability?: number;
+  valueGap?: number;
+  isValueBet: boolean;
+  explanation?: string;
+  explanationFactors?: Record<string, unknown>;
+  probabilityUpdatedAt: string;
 }
 
 export interface Pick {
   id: string;
-  marketId: string;
-  label: string;
-  odds: number;
+  rank: number;
   probability: number;
-  description?: string;
-  createdAt: string;
-  updatedAt: string;
+  confidence: number;
+  explanation?: string;
+  market: Market;
+  event?: Event;
 }
 
 export interface PickSummary {
-  pickId: string;
-  label: string;
+  id: string;
+  rank: number;
   probability: number;
-  odds: number;
-  eventId: string;
-  eventTitle: string;
-  category: MarketCategory;
-  kickoffTime: string;
+  market: {
+    name: string;
+    shortName?: string;
+    category: MarketCategory;
+  };
 }
 
 export interface Lineup {
   id: string;
-  eventId: string;
   teamId: string;
-  formation: string;
-  players: LineupEntry[];
-  updatedAt: string;
+  formation?: string;
+  isConfirmed: boolean;
+  entries: LineupEntry[];
 }
 
 export interface LineupEntry {
   id: string;
-  playerId: string;
-  playerName: string;
-  position: string;
-  number: number;
-  captain?: boolean;
+  player: {
+    id: string;
+    name: string;
+    position?: string;
+    number?: number;
+    photoUrl?: string;
+  };
+  isStarter: boolean;
+  position?: string;
 }
 
 export interface MatchStat {
   id: string;
-  eventId: string;
-  teamId: string;
-  stat: string;
-  value: number;
+  team: Team;
+  goals: number;
+  shotsTotal?: number;
+  shotsOnTarget?: number;
+  possession?: number;
+  corners: number;
+  yellowCards: number;
+  redCards: number;
 }
 
 export interface BuilderSelection {
-  pickId: string;
-  label: string;
-  probability: number;
-  odds: number;
-  eventId: string;
-  eventTitle: string;
-  category: MarketCategory;
-  kickoffTime: string;
+  id: string;
+  market: Market & { event: Event };
+  addedProbability: number;
+  createdAt: string;
 }
 
 export interface BuilderState {
   selections: BuilderSelection[];
   count: number;
   combinedProbability: number;
-  combinedOdds: number;
 }
 
 export interface SportSummary {
   sport: Sport;
   eventCount: number;
-  marketCount: number;
 }
 
 export interface PaginatedResponse<T> {
   data: T[];
-  total: number;
-  page: number;
-  pageSize: number;
-  totalPages: number;
+  meta: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+    hasNext: boolean;
+    hasPrev: boolean;
+  };
 }
 
 export interface ApiResponse<T> {
   success: boolean;
   data: T;
-  message?: string;
-  errors?: string[];
+  meta?: Record<string, unknown>;
 }
 
 export interface TokenPair {

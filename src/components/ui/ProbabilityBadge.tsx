@@ -1,55 +1,41 @@
-'use client'
-
-import { cn } from '@/lib/utils'
+import { cn, formatProbability, getProbabilityTier } from '@/lib/utils';
 
 interface ProbabilityBadgeProps {
-  probability: number
-  size?: 'sm' | 'md' | 'lg'
-  isValueBet?: boolean
-}
-
-export function getProbabilityTier(
-  probability: number
-): 'high' | 'mid' | 'low' {
-  if (probability >= 65) return 'high'
-  if (probability >= 45) return 'mid'
-  return 'low'
-}
-
-export function formatProbability(probability: number): string {
-  return `${Math.round(probability)}%`
+  probability: number;
+  isValueBet?: boolean;
+  size?: 'sm' | 'md' | 'lg';
+  className?: string;
 }
 
 export function ProbabilityBadge({
   probability,
+  isValueBet,
   size = 'md',
-  isValueBet = false,
+  className,
 }: ProbabilityBadgeProps) {
-  const tier = getProbabilityTier(probability)
-
-  const tierColors = {
-    high: 'prob-high',
-    mid: 'prob-mid',
-    low: 'prob-low',
-  }
-
-  const sizeStyles = {
-    sm: 'px-2 py-1 text-xs font-semibold',
-    md: 'px-3 py-1.5 text-sm font-semibold',
-    lg: 'px-4 py-2 text-base font-bold',
-  }
-
-  const baseClass = isValueBet ? 'prob-value' : tierColors[tier]
+  const tier = getProbabilityTier(probability);
 
   return (
     <span
       className={cn(
-        'inline-flex items-center justify-center rounded-full font-mono',
-        baseClass,
-        sizeStyles[size]
+        'inline-flex items-center gap-1 rounded-full font-mono font-semibold',
+        {
+          'px-2 py-0.5 text-caption': size === 'sm',
+          'px-3 py-1 text-body-sm': size === 'md',
+          'px-4 py-1.5 text-body': size === 'lg',
+        },
+        isValueBet
+          ? 'prob-value'
+          : {
+              'prob-high': tier === 'high',
+              'prob-mid': tier === 'mid',
+              'prob-low': tier === 'low',
+            },
+        className,
       )}
     >
       {formatProbability(probability)}
+      {isValueBet && <span className="text-[10px]">VALUE</span>}
     </span>
-  )
+  );
 }

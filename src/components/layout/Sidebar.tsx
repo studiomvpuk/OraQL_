@@ -1,81 +1,87 @@
-'use client'
+'use client';
 
-import { useRouter, usePathname } from 'next/navigation'
-import { useAuthStore } from '@/store/authStore'
-import { Trophy, LayoutDashboard, Star, Layers, LogOut } from 'lucide-react'
-import Link from 'next/link'
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import {
+  LayoutDashboard,
+  Star,
+  Layers,
+  Settings,
+  LogOut,
+  Trophy,
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { useAuthStore } from '@/stores/auth.store';
+
+const navItems = [
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/picks', label: 'OraQL_ Picks', icon: Star },
+  { href: '/builder', label: 'Bet Builder', icon: Layers },
+];
 
 export function Sidebar() {
-  const router = useRouter()
-  const pathname = usePathname()
-  const { user, logout } = useAuthStore()
-
-  const navItems = [
-    { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-    { label: 'OraQL_ Picks', href: '/picks', icon: Star },
-    { label: 'Bet Builder', href: '/builder', icon: Layers },
-  ]
-
-  const handleLogout = () => {
-    logout()
-    router.push('/auth')
-  }
+  const pathname = usePathname();
+  const { user, logout } = useAuthStore();
 
   return (
-    <aside className="fixed left-0 top-0 h-screen w-64 bg-dark-ink border-r border-dark-graphite flex flex-col">
+    <aside className="fixed left-0 top-0 z-40 flex h-screen w-64 flex-col border-r border-dark-graphite bg-dark-ink">
       {/* Logo */}
-      <div className="p-6 border-b border-dark-graphite">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-oracle-gold rounded-lg flex items-center justify-center">
-            <Trophy className="w-6 h-6 text-dark-ink" />
-          </div>
-          <span className="text-xl font-bold text-oracle-gold">OraQL_</span>
+      <div className="flex h-16 items-center gap-3 border-b border-dark-graphite px-6">
+        <div className="flex h-9 w-9 items-center justify-center rounded-oracle-sm bg-oracle-gold/20">
+          <Trophy className="h-5 w-5 text-oracle-gold" />
         </div>
+        <span className="font-display text-display-sm tracking-tight text-txt-inverse">
+          OraQL_
+        </span>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 px-4 py-6 space-y-2">
+      <nav className="flex-1 space-y-1 px-3 py-4">
         {navItems.map((item) => {
-          const Icon = item.icon
-          const isActive = pathname === item.href
+          const isActive = pathname?.startsWith(item.href);
+          const Icon = item.icon;
+
           return (
             <Link
               key={item.href}
               href={item.href}
-              className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+              className={cn(
+                'flex items-center gap-3 rounded-oracle-sm px-3 py-2.5 text-body font-medium transition-all duration-normal',
                 isActive
                   ? 'bg-oracle-gold/15 text-oracle-gold'
-                  : 'text-txt-inverse-2 hover:bg-dark-graphite'
-              }`}
+                  : 'text-txt-inverse-2 hover:bg-dark-graphite hover:text-txt-inverse',
+              )}
             >
-              <Icon className="w-5 h-5" />
-              <span className="font-medium">{item.label}</span>
+              <Icon className="h-[18px] w-[18px]" />
+              {item.label}
             </Link>
-          )
+          );
         })}
       </nav>
 
-      {/* User Section */}
-      <div className="p-4 border-t border-dark-graphite space-y-3">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-oracle-gold/20 rounded-full flex items-center justify-center">
-            <div className="w-8 h-8 bg-gradient-to-br from-oracle-gold to-oracle-gold/50 rounded-full" />
+      {/* User section */}
+      <div className="border-t border-dark-graphite p-3">
+        <div className="flex items-center gap-3 rounded-oracle-sm px-3 py-2">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-oracle-gold/20 font-display text-caption font-semibold text-oracle-gold">
+            {user?.firstName?.[0] || user?.email?.[0]?.toUpperCase() || 'U'}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-txt-primary truncate">
-              {user?.name || 'User'}
+            <p className="truncate text-body-sm font-medium text-txt-inverse">
+              {user?.firstName || user?.email || 'User'}
             </p>
-            <p className="text-xs text-txt-inverse-2 truncate">{user?.role || 'Member'}</p>
+            <p className="truncate text-caption text-txt-inverse-2">
+              {user?.role || 'Free'}
+            </p>
           </div>
+          <button
+            onClick={() => logout()}
+            className="rounded-md p-1.5 text-txt-inverse-2 transition-colors hover:bg-dark-graphite hover:text-danger"
+            title="Log out"
+          >
+            <LogOut className="h-4 w-4" />
+          </button>
         </div>
-        <button
-          onClick={handleLogout}
-          className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-txt-inverse-2 hover:bg-dark-graphite transition-colors"
-        >
-          <LogOut className="w-4 h-4" />
-          <span className="text-sm font-medium">Logout</span>
-        </button>
       </div>
     </aside>
-  )
+  );
 }

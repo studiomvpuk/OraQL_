@@ -1,231 +1,169 @@
 'use client';
 
-import { useState, useMemo } from 'react';
-import { Sparkles, Trash2, Download } from 'lucide-react';
-import { PickCard } from '@/components/PickCard';
-import { useBuilderStore } from '@/store/builder';
-
-interface BuilderPick {
-  id: string;
-  eventId: string;
-  market: string;
-  selection: string;
-  probability: number;
-  odds: number;
-  reasoning: string;
-  homeTeam: string;
-  awayTeam: string;
-  league: string;
-  startTime: string;
-}
+import { useEffect, useState } from 'react';
+import { Layers, X, Copy, Trash2, ArrowRight, Sparkles } from 'lucide-react';
+import { cn, formatProbability, formatKickoff } from '@/lib/utils';
+import { ProbabilityBadge } from '@/components/ui/ProbabilityBadge';
+import { Button } from '@/components/ui/Button';
+import { useBuilderStore } from '@/stores/builder.store';
+import Link from 'next/link';
 
 export default function BuilderPage() {
-  const { selections, clearAll } = useBuilderStore();
-  const [exporting, setExporting] = useState(false);
+  const { selections, count, combinedProbability, load, remove, clear, exportText, isLoading } =
+    useBuilderStore();
+  const [copied, setCopied] = useState(false);
 
-  // Mock selected picks for demonstration
-  const [selectedPicks] = useState<BuilderPick[]>([
-    {
-      id: 'pick-1',
-      eventId: 'event-1',
-      market: 'Moneyline',
-      selection: 'Kansas City Chiefs',
-      probability: 0.72,
-      odds: 1.65,
-      reasoning: 'Strong offensive momentum with 3-game winning streak.',
-      homeTeam: 'Kansas City Chiefs',
-      awayTeam: 'Denver Broncos',
-      league: 'NFL',
-      startTime: '2024-12-15T20:20:00Z',
-    },
-    {
-      id: 'pick-2',
-      eventId: 'event-2',
-      market: 'Over/Under',
-      selection: 'Over 47.5',
-      probability: 0.68,
-      odds: 1.91,
-      reasoning: 'Both teams averaging 25+ points in last 5 games.',
-      homeTeam: 'Buffalo Bills',
-      awayTeam: 'Miami Dolphins',
-      league: 'NFL',
-      startTime: '2024-12-16T13:00:00Z',
-    },
-  ]);
-
-  // Calculate combined probability (simplified parlay calculation)
-  const combinedProbability = useMemo(() => {
-    if (selectedPicks.length === 0) return 0;
-    return selectedPicks.reduce((acc, pick) => acc * pick.probability, 1);
-  }, [selectedPicks]);
-
-  // Calculate combined odds (multiply all odds together)
-  const combinedOdds = useMemo(() => {
-    if (selectedPicks.length === 0) return 0;
-    return selectedPicks.reduce((acc, pick) => acc * pick.odds, 1);
-  }, [selectedPicks]);
+  useEffect(() => {
+    load();
+  }, [load]);
 
   const handleExport = async () => {
-    setExporting(true);
     try {
-      // Simulate export
-      const parlay = {
-        selections: selectedPicks.map((p) => ({
-          event: `${p.homeTeam} vs ${p.awayTeam}`,
-          market: p.market,
-          selection: p.selection,
-          odds: p.odds,
-        })),
-        combinedOdds: combinedOdds.toFixed(2),
-        combinedProbability: (combinedProbability * 100).toFixed(1),
-        createdAt: new Date().toISOString(),
-      };
-
-      const blob = new Blob([JSON.stringify(parlay, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `parlay-${Date.now()}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
-    } finally {
-      setExporting(false);
+      const text = await exportText();
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // fallback
     }
   };
 
   return (
-    <div className="min-h-screen">
-      {/* Header */}
-      <section className="bg-[#1a1815] text-[#f9f7f3] py-8 relative overflow-hidden">
-        <div className="absolute top-4 right-20 deco-letter dark">B</div>
-        <div className="max-w-7xl mx-auto px-6 relative z-10">
-          <div className="flex items-start justify-between mb-6">
-            <div>
-              <h1 className="text-4xl font-bold mb-2">Parlay Builder</h1>
-              <p className="text-[#b8b0a5] font-light">
-                Build custom multi-leg bets with combined probability calculations
-              </p>
-            </div>
-            <div className="text-right">
-              <p className="text-sm text-[#b8b0a5] font-light mb-2">Selections: {selectedPicks.length}</p>
-              <p className="text-3xl font-mono font-bold text-[#d4a574]">
-                {(combinedProbability * 100).toFixed(1)}%
-              </p>
-            </div>
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex gap-3">
-            <button
-              onClick={handleExport}
-              disabled={selectedPicks.length === 0 || exporting}
-              className="flex items-center gap-2 px-6 py-2 bg-[#d4a574] text-[#1a1815] rounded-lg hover:bg-[#c99465] transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <Download size={18} />
-              Export Parlay
-            </button>
-            <button
-              onClick={clearAll}
-              disabled={selectedPicks.length === 0}
-              className="flex items-center gap-2 px-6 py-2 border-2 border-[#d4a574] text-[#d4a574] rounded-lg hover:bg-[#2a2520] transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <Trash2 size={18} />
-              Clear All
-            </button>
-          </div>
+    <div className="space-y-0">
+      {/* Header Section - Dark Surface with Confidence Display */}
+      <div className="relative overflow-hidden bg-dark-ink px-8 py-12">
+        {/* Decorative background letter */}
+        <div className="absolute inset-0 flex items-start justify-end overflow-hidden">
+          <span className="text-white/[0.04] font-display text-[300px] leading-none -right-12 -top-20 absolute">
+            B
+          </span>
         </div>
-      </section>
 
-      <div className="grid grid-cols-3 gap-6 max-w-7xl mx-auto px-6 py-8">
-        {/* Left Column - Selection List */}
-        <div className="col-span-2">
-          <div className="bg-white rounded-lg border-2 border-[#e5dfd6] p-6">
-            <h2 className="text-lg font-bold text-[#1a1815] mb-4">Selected Picks ({selectedPicks.length})</h2>
-
-            {selectedPicks.length === 0 ? (
-              <div className="py-12 text-center">
-                <Sparkles className="w-12 h-12 text-[#d4a574] mx-auto mb-4 opacity-50" />
-                <p className="text-[#3a3530] font-light mb-4">No picks selected yet</p>
-                <a
-                  href="/app/picks"
-                  className="inline-block px-6 py-2 bg-[#1a1815] text-[#f9f7f3] rounded-lg hover:bg-[#2a2520] transition-colors font-medium"
-                >
-                  Browse Picks
-                </a>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {selectedPicks.map((pick, index) => (
-                  <div
-                    key={pick.id}
-                    className="flex items-start gap-4 p-4 bg-[#f9f7f3] rounded-lg border border-[#e5dfd6]"
-                  >
-                    <div className="flex items-center justify-center w-8 h-8 bg-[#d4a574] text-[#1a1815] rounded font-bold text-sm flex-shrink-0">
-                      {index + 1}
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-bold text-[#1a1815]">{pick.selection}</p>
-                      <p className="text-sm text-[#3a3530] font-light">
-                        {pick.homeTeam} vs {pick.awayTeam}
-                      </p>
-                      <p className="text-xs text-[#8a8077] mt-1">{pick.market}</p>
-                    </div>
-                    <div className="text-right flex-shrink-0">
-                      <p className="font-mono font-bold text-[#1a1815]">{pick.odds.toFixed(2)}</p>
-                      <p className="text-sm font-medium text-[#d4a574]">{(pick.probability * 100).toFixed(0)}%</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
+        <div className="relative z-10">
+          {/* Title and Selection Count */}
+          <div className="flex items-center gap-4 mb-6">
+            <Layers className="h-7 w-7 text-oracle-gold flex-shrink-0" />
+            <div className="flex-1">
+              <h1 className="font-display text-display-md tracking-tight text-txt-inverse">
+                Bet Builder
+              </h1>
+            </div>
+            {count > 0 && (
+              <span className="rounded-full bg-warm-cream font-mono text-body-sm font-bold text-txt-secondary px-3 py-2 flex-shrink-0">
+                {count}
+              </span>
             )}
           </div>
-        </div>
 
-        {/* Right Column - Summary */}
-        <div className="col-span-1">
-          <div className="space-y-4 sticky top-8">
-            {/* Parlay Summary */}
-            <div className="bg-white rounded-lg border-2 border-[#e5dfd6] p-6">
-              <h3 className="text-lg font-bold text-[#1a1815] mb-4">Parlay Summary</h3>
-              <div className="space-y-4">
-                <div>
-                  <p className="text-[#3a3530] text-sm font-light mb-1">Combined Odds</p>
-                  <p className="text-3xl font-mono font-bold text-[#1a1815]">
-                    {combinedOdds.toFixed(2)}
-                  </p>
-                </div>
-                <div className="border-t border-[#e5dfd6] pt-4">
-                  <p className="text-[#3a3530] text-sm font-light mb-1">Parlay Probability</p>
-                  <p className="text-2xl font-bold text-oracle-gradient">
-                    {(combinedProbability * 100).toFixed(1)}%
-                  </p>
-                </div>
-                <div className="border-t border-[#e5dfd6] pt-4">
-                  <p className="text-[#3a3530] text-sm font-light mb-2">Potential Winnings</p>
-                  <div className="space-y-2">
-                    {[10, 50, 100].map((stake) => (
-                      <div key={stake} className="flex items-center justify-between">
-                        <span className="text-sm text-[#3a3530]">${stake} stake</span>
-                        <span className="font-mono font-bold text-[#1a1815]">
-                          ${(stake * combinedOdds).toFixed(2)}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+          {/* Description */}
+          <p className="text-body text-txt-inverse-2 max-w-2xl mb-8">
+            Your multi-match strategy. Add picks from different events, review the combined probability, and export when ready.
+          </p>
+
+          {/* Combined Probability and Actions */}
+          {count > 0 && (
+            <div className="flex flex-col sm:flex-row sm:items-end gap-8">
+              {/* Probability Display - Largest Element */}
+              <div className="flex-1">
+                <p className="text-caption text-txt-inverse-2 mb-2">Combined Probability</p>
+                <p className="font-mono text-display-sm font-bold text-oracle-gold">
+                  {formatProbability(combinedProbability)}
+                </p>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 flex-wrap sm:flex-nowrap">
+                <Button variant="gold" onClick={handleExport} className="flex-1 sm:flex-none">
+                  <Copy className="h-4 w-4" />
+                  {copied ? 'Copied!' : 'Export'}
+                </Button>
+                <Button
+                  variant="ghost"
+                  className="text-txt-inverse-2 hover:text-danger hover:bg-danger/10 flex-1 sm:flex-none"
+                  onClick={() => clear()}
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Clear All
+                </Button>
               </div>
             </div>
-
-            {/* Risk Notice */}
-            <div className="bg-yellow-50 rounded-lg border border-yellow-200 p-4">
-              <p className="text-xs text-yellow-900 font-light">
-                <span className="font-bold">Note:</span> These are AI-generated recommendations. Always do your own
-                research and gamble responsibly.
-              </p>
-            </div>
-          </div>
+          )}
         </div>
       </div>
+
+      {/* Selections Section - Warm Light Surface */}
+      {isLoading ? (
+        <div className="bg-warm-white px-8 py-8">
+          <div className="space-y-3">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-24 animate-pulse rounded-oracle-md bg-warm-cream/40" />
+            ))}
+          </div>
+        </div>
+      ) : count > 0 ? (
+        <div className="bg-warm-white px-8 py-8">
+          <div className="space-y-3">
+            {selections.map((s, idx) => (
+              <div
+                key={s.id}
+                className="group flex items-center gap-4 rounded-oracle-md bg-white border border-warm-sand transition-all duration-200 hover:border-oracle-gold hover:shadow-sm p-5"
+              >
+                {/* Selection Number Badge */}
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-warm-cream font-mono text-body-sm font-bold text-txt-secondary flex-shrink-0">
+                  {idx + 1}
+                </span>
+
+                {/* Event Information */}
+                <div className="flex-1 min-w-0">
+                  <p className="font-display text-heading tracking-tight text-txt-primary truncate">
+                    {s.market.event.homeTeam.shortName || s.market.event.homeTeam.name} vs{' '}
+                    {s.market.event.awayTeam.shortName || s.market.event.awayTeam.name}
+                  </p>
+                  <p className="text-body-sm text-txt-secondary mt-1">
+                    {s.market.name}
+                    <span className="mx-2 text-warm-stone">·</span>
+                    {s.market.event.league.name}
+                    <span className="mx-2 text-warm-stone">·</span>
+                    {formatKickoff(s.market.event.kickoffAt)}
+                  </p>
+                </div>
+
+                {/* Probability Badge */}
+                <ProbabilityBadge
+                  probability={s.market.probability}
+                  isValueBet={s.market.isValueBet}
+                />
+
+                {/* Remove Button */}
+                <button
+                  onClick={() => remove(s.market.id)}
+                  className="rounded-md p-2 text-txt-tertiary opacity-0 transition-all duration-200 hover:bg-danger/10 hover:text-danger group-hover:opacity-100 flex-shrink-0"
+                  aria-label="Remove selection"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <div className="bg-warm-white px-8 py-12">
+          <div className="flex flex-col items-center justify-center rounded-oracle-lg border-2 border-dashed border-warm-stone py-16 text-center">
+            <Sparkles className="mb-6 h-12 w-12 text-warm-taupe" />
+            <h3 className="font-display text-display-sm tracking-tight text-txt-primary mb-3">
+              Your builder is empty
+            </h3>
+            <p className="text-body text-txt-secondary mb-8 max-w-md">
+              Browse today&apos;s fixtures and OraQL_ Picks, then add selections to build your multi-match strategy.
+            </p>
+            <Link href="/dashboard">
+              <Button variant="primary">
+                Browse Events <ArrowRight className="h-4 w-4" />
+              </Button>
+            </Link>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
