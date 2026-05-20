@@ -33,7 +33,7 @@ export default function PicksPage() {
     <div className="p-6 space-y-8">
       {/* Header — Warm cream surface with decorative texture */}
       <div className="relative overflow-hidden rounded-oracle-lg bg-warm-cream p-8">
-        <span className="absolute -right-8 -top-20 text-8xl font-display font-bold text-warm-sand opacity-6">
+        <span className="absolute -right-8 -top-20 text-8xl font-display font-bold text-warm-sand opacity-[0.06]">
           P
         </span>
         <div className="relative z-10">

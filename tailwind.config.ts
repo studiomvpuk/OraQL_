@@ -81,7 +81,8 @@ const config: Config = {
         'body-lg':    ['1rem', { lineHeight: '1.6' }],
         'body':       ['0.875rem', { lineHeight: '1.6' }],
         'body-sm':    ['0.8125rem', { lineHeight: '1.5' }],
-        'caption':    ['0.75rem', { lineHeight: '1.5' }],
+        'body-xs':    ['0.75rem', { lineHeight: '1.5' }],
+        'caption':    ['0.6875rem', { lineHeight: '1.5' }],
         'mono-sm':    ['0.75rem', { lineHeight: '1.5', fontWeight: '500' }],
       },
 
