@@ -32,7 +32,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     if (typeof window !== 'undefined') {
       localStorage.setItem('oracle_refresh', tokens.refreshToken);
     }
-    const user = await api.get<User>('/users/me');
+    const user = await api.get<User>('/auth/me');
     set({ user, isAuthenticated: true });
   },
 
@@ -42,7 +42,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     if (typeof window !== 'undefined') {
       localStorage.setItem('oracle_refresh', tokens.refreshToken);
     }
-    const user = await api.get<User>('/users/me');
+    const user = await api.get<User>('/auth/me');
     set({ user, isAuthenticated: true });
   },
 
@@ -66,7 +66,7 @@ export const useAuthStore = create<AuthState>((set) => ({
         set({ isLoading: false });
         return;
       }
-      const user = await api.get<User>('/users/me');
+      const user = await api.get<User>('/auth/me');
       set({ user, isAuthenticated: true, isLoading: false });
     } catch {
       set({ user: null, isAuthenticated: false, isLoading: false });
