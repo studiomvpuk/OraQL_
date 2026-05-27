@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Star, TrendingUp, Zap, BarChart3 } from 'lucide-react';
 import { TopBar } from '@/components/layout/TopBar';
 import { EventCard } from '@/components/events/EventCard';
 import { PickCard } from '@/components/picks/PickCard';
+import { LeagueFilter } from '@/components/events/LeagueFilter';
 import { api } from '@/lib/api';
 import type { Event, Pick, Sport, PaginatedResponse, SportSummary } from '@/types';
 
@@ -13,9 +14,11 @@ export default function DashboardPage() {
   const [events, setEvents] = useState<Event[]>([]);
   const [topPicks, setTopPicks] = useState<Pick[]>([]);
   const [sportCounts, setSportCounts] = useState<Record<string, number>>({});
+  const [selectedLeagues, setSelectedLeagues] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    setSelectedLeagues([]); // Reset league filter on sport change
     loadData();
   }, [activeSport]);
 
@@ -39,8 +42,34 @@ export default function DashboardPage() {
     setIsLoading(false);
   }
 
-  // Group events by league
-  const groupedEvents = events.reduce(
+  // Extract unique leagues from events for the filter
+  const leagues = useMemo(() => {
+    const leagueMap = new Map<string, { id: string; name: string; eventCount: number }>();
+    events.forEach((event) => {
+      const existing = leagueMap.get(event.league.id || event.league.name);
+      if (existing) {
+        existing.eventCount++;
+      } else {
+        leagueMap.set(event.league.id || event.league.name, {
+          id: event.league.id || event.league.name,
+          name: event.league.name,
+          eventCount: 1,
+        });
+      }
+    });
+    return Array.from(leagueMap.values()).sort((a, b) => b.eventCount - a.eventCount);
+  }, [events]);
+
+  // Filter events by selected leagues (empty = all)
+  const filteredEvents = useMemo(() => {
+    if (selectedLeagues.length === 0) return events;
+    return events.filter((e) =>
+      selectedLeagues.includes(e.league.id || e.league.name),
+    );
+  }, [events, selectedLeagues]);
+
+  // Group filtered events by league
+  const groupedEvents = filteredEvents.reduce(
     (acc, event) => {
       const key = event.league.name;
       if (!acc[key]) acc[key] = [];
@@ -122,8 +151,15 @@ export default function DashboardPage() {
                 </h2>
               </div>
               <span className="inline-flex items-center px-4 py-2 rounded-oracle-md bg-warm-cream text-txt-secondary font-body text-body-sm font-semibold">
-                {events.length} {events.length === 1 ? 'match' : 'matches'}
+                {filteredEvents.length} {filteredEvents.length === 1 ? 'match' : 'matches'}
               </span>
+              {leagues.length > 1 && (
+                <LeagueFilter
+                  leagues={leagues}
+                  selectedLeagues={selectedLeagues}
+                  onSelectionChange={setSelectedLeagues}
+                />
+              )}
             </div>
 
             {/* Events Grid by League */}
