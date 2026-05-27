@@ -68,7 +68,9 @@ class ApiClient {
       throw new ApiError(response.status, error.message || 'Request failed', error.errors);
     }
 
-    return response.json();
+    const json = await response.json();
+    // Backend wraps responses in { success, data } via TransformInterceptor
+    return json.data !== undefined ? json.data : json;
   }
 
   // ─── HTTP Methods ───
