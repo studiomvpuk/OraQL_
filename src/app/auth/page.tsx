@@ -26,12 +26,12 @@ function AuthPageContent() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { login, register, isAuthenticated } = useAuthStore();
+  const { login, register, isAuthenticated, isLoading: authLoading } = useAuthStore();
   const router = useRouter();
 
   useEffect(() => {
-    if (isAuthenticated) router.push('/dashboard');
-  }, [isAuthenticated, router]);
+    if (!authLoading && isAuthenticated) router.replace('/dashboard');
+  }, [authLoading, isAuthenticated, router]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -44,11 +44,11 @@ function AuthPageContent() {
       } else {
         await register({ email, password, firstName });
       }
-      router.push('/dashboard');
+      router.replace('/dashboard');
     } catch (err: any) {
       setError(err.message || 'Something went wrong. Please try again.');
+      setIsLoading(false);
     }
-    setIsLoading(false);
   }
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';

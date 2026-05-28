@@ -33,7 +33,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       localStorage.setItem('oracle_refresh', tokens.refreshToken);
     }
     const user = await api.get<User>('/auth/me');
-    set({ user, isAuthenticated: true });
+    set({ user, isAuthenticated: true, isLoading: false });
   },
 
   register: async (data) => {
@@ -43,7 +43,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       localStorage.setItem('oracle_refresh', tokens.refreshToken);
     }
     const user = await api.get<User>('/auth/me');
-    set({ user, isAuthenticated: true });
+    set({ user, isAuthenticated: true, isLoading: false });
   },
 
   logout: async () => {
@@ -56,7 +56,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     if (typeof window !== 'undefined') {
       localStorage.removeItem('oracle_refresh');
     }
-    set({ user: null, isAuthenticated: false });
+    set({ user: null, isAuthenticated: false, isLoading: false });
   },
 
   loadUser: async () => {

@@ -14,16 +14,16 @@ export function AuthGuard({ children }: AuthGuardProps) {
   const router = useRouter();
 
   useEffect(() => {
-    loadUser();
-  }, [loadUser]);
+    if (!isAuthenticated) loadUser();
+  }, [isAuthenticated, loadUser]);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      router.push('/auth');
+      router.replace('/auth');
     }
   }, [isLoading, isAuthenticated, router]);
 
-  if (isLoading) {
+  if (isLoading && !isAuthenticated) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-warm-white">
         <div className="flex flex-col items-center gap-4 animate-fade-in">
