@@ -90,23 +90,23 @@ export default function DashboardPage() {
 
       <div className="relative">
         {/* ─── Section 1: Hero "Top Picks Today" (Dark Surface) ─── */}
-        <section className="relative overflow-hidden bg-dark-ink px-6 py-12 md:px-8 lg:px-12">
+        <section className="relative overflow-hidden bg-dark-ink px-4 py-8 sm:px-6 sm:py-12 md:px-8 lg:px-12">
           {/* Oversized Decorative Letter - Confidence at a Glance Theme */}
-          <div className="absolute -right-12 -top-20 text-white/[0.04] font-display text-9xl tracking-tight leading-none pointer-events-none">
+          <div className="pointer-events-none absolute -right-12 -top-20 hidden font-display text-9xl leading-none tracking-tight text-white/[0.04] sm:block">
             O
           </div>
 
-          <div className="relative z-10 max-w-7xl mx-auto">
+          <div className="relative z-10 mx-auto max-w-7xl">
             {/* Section Header */}
-            <div className="mb-8 flex items-start gap-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-oracle-md bg-oracle-gold/20 flex-shrink-0 mt-0.5">
-                <Star className="h-6 w-6 fill-oracle-gold text-oracle-gold" />
+            <div className="mb-6 flex items-start gap-3 sm:mb-8 sm:gap-4">
+              <div className="mt-0.5 flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-oracle-md bg-oracle-gold/20 sm:h-12 sm:w-12">
+                <Star className="h-5 w-5 fill-oracle-gold text-oracle-gold sm:h-6 sm:w-6" />
               </div>
-              <div>
-                <h2 className="font-display text-display-lg tracking-tight text-txt-inverse mb-2">
+              <div className="min-w-0">
+                <h2 className="mb-2 font-display text-2xl tracking-tight text-txt-inverse sm:text-3xl lg:text-display-lg">
                   Top Picks Today
                 </h2>
-                <p className="text-body-sm text-txt-inverse-2 max-w-lg">
+                <p className="max-w-lg text-body-sm text-txt-inverse-2">
                   OraQL_&apos;s highest-confidence predictions across all matches
                 </p>
               </div>
@@ -114,7 +114,7 @@ export default function DashboardPage() {
 
             {/* Picks Grid */}
             {isLoading ? (
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {[1, 2, 3].map((i) => (
                   <div
                     key={i}
@@ -123,7 +123,7 @@ export default function DashboardPage() {
                 ))}
               </div>
             ) : topPicks.length > 0 ? (
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {topPicks.map((pick) => (
                   <PickCard key={pick.id} pick={pick} variant="dark" showEvent />
                 ))}
@@ -140,17 +140,17 @@ export default function DashboardPage() {
         </section>
 
         {/* ─── Section 2: "Today's Fixtures" (Warm White Surface) ─── */}
-        <section className="relative px-6 py-12 md:px-8 lg:px-12 bg-warm-white">
-          <div className="max-w-7xl mx-auto">
+        <section className="relative bg-warm-white px-4 py-8 sm:px-6 sm:py-12 md:px-8 lg:px-12">
+          <div className="mx-auto max-w-7xl">
             {/* Section Header */}
-            <div className="mb-8 flex items-center gap-4 flex-wrap">
+            <div className="mb-6 flex flex-wrap items-center gap-3 sm:mb-8 sm:gap-4">
               <div className="flex items-center gap-3">
-                <TrendingUp className="h-6 w-6 text-oracle-gold flex-shrink-0" />
-                <h2 className="font-display text-display-md tracking-tight text-txt-primary">
+                <TrendingUp className="h-5 w-5 flex-shrink-0 text-oracle-gold sm:h-6 sm:w-6" />
+                <h2 className="font-display text-2xl tracking-tight text-txt-primary sm:text-display-md">
                   Today's Fixtures
                 </h2>
               </div>
-              <span className="inline-flex items-center px-4 py-2 rounded-oracle-md bg-warm-cream text-txt-secondary font-body text-body-sm font-semibold">
+              <span className="inline-flex items-center rounded-oracle-md bg-warm-cream px-3 py-1.5 font-body text-body-sm font-semibold text-txt-secondary sm:px-4 sm:py-2">
                 {filteredEvents.length} {filteredEvents.length === 1 ? 'match' : 'matches'}
               </span>
               {leagues.length > 1 && (
@@ -217,30 +217,30 @@ export default function DashboardPage() {
 
         {/* ─── Section 3: Stats/Summary Row (Warm Cream Surface) ─── */}
         {!isLoading && Object.keys(sportCounts).length > 0 && (
-          <section className="relative px-6 py-10 md:px-8 lg:px-12 bg-warm-cream">
-            <div className="max-w-7xl mx-auto">
+          <section className="relative bg-warm-cream px-4 py-8 sm:px-6 sm:py-10 md:px-8 lg:px-12">
+            <div className="mx-auto max-w-7xl">
               {/* Section Header */}
-              <div className="flex items-center gap-3 mb-8">
-                <BarChart3 className="h-6 w-6 text-oracle-gold flex-shrink-0" />
-                <h2 className="font-display text-display-sm tracking-tight text-txt-primary">
+              <div className="mb-6 flex items-center gap-3 sm:mb-8">
+                <BarChart3 className="h-5 w-5 flex-shrink-0 text-oracle-gold sm:h-6 sm:w-6" />
+                <h2 className="font-display text-xl tracking-tight text-txt-primary sm:text-display-sm">
                   Today's Summary
                 </h2>
               </div>
 
               {/* Summary Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-2 lg:grid-cols-4">
                 {Object.entries(sportCounts).map(([sport, count]) => (
                   <div
                     key={sport}
-                    className="rounded-oracle-md bg-warm-white border border-warm-sand p-6 shadow-soft"
+                    className="rounded-oracle-md border border-warm-sand bg-warm-white p-4 shadow-soft sm:p-6"
                   >
-                    <p className="text-body-xs font-mono uppercase tracking-widest text-txt-secondary mb-2 font-semibold">
+                    <p className="mb-2 font-mono text-body-xs font-semibold uppercase tracking-widest text-txt-secondary">
                       {sport}
                     </p>
-                    <p className="font-display text-display-xl text-txt-primary tracking-tight">
+                    <p className="font-display text-3xl tracking-tight text-txt-primary sm:text-display-xl">
                       {count}
                     </p>
-                    <p className="text-body-xs text-txt-tertiary mt-1">
+                    <p className="mt-1 text-body-xs text-txt-tertiary">
                       {count === 1 ? 'Event' : 'Events'}
                     </p>
                   </div>

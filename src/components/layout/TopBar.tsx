@@ -17,10 +17,10 @@ interface TopBarProps {
 
 export function TopBar({ activeSport, onSportChange, sportCounts }: TopBarProps) {
   return (
-    <header className="sticky top-0 z-30 border-b border-warm-sand bg-warm-white/80 backdrop-blur-md">
-      <div className="flex h-16 items-center justify-between px-6">
-        {/* Sport Toggle */}
-        <div className="flex items-center gap-1 rounded-full bg-warm-cream p-1">
+    <header className="sticky top-14 z-20 border-b border-warm-sand bg-warm-white/80 backdrop-blur-md lg:top-0 lg:z-30">
+      <div className="flex h-16 items-center justify-between gap-3 px-4 sm:px-6">
+        {/* Sport Toggle — horizontally scrollable on mobile */}
+        <div className="-mx-1 flex min-w-0 flex-1 items-center gap-1 overflow-x-auto rounded-full bg-warm-cream p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {sports.map((sport) => {
             const isActive = activeSport === sport.value;
             const count = sportCounts?.[sport.value];
@@ -30,14 +30,14 @@ export function TopBar({ activeSport, onSportChange, sportCounts }: TopBarProps)
                 key={sport.value}
                 onClick={() => onSportChange(sport.value)}
                 className={cn(
-                  'flex items-center gap-2 rounded-full px-4 py-2 text-body-sm font-medium transition-all duration-normal',
+                  'flex flex-shrink-0 items-center gap-2 rounded-full px-3 py-2 text-body-sm font-medium transition-all duration-normal sm:px-4',
                   isActive
                     ? 'bg-warm-white text-txt-primary shadow-soft'
                     : 'text-txt-secondary hover:text-txt-primary',
                 )}
               >
                 <span>{sport.emoji}</span>
-                <span>{getSportLabel(sport.value)}</span>
+                <span className="hidden xs:inline sm:inline">{getSportLabel(sport.value)}</span>
                 {count !== undefined && (
                   <span
                     className={cn(
@@ -55,8 +55,8 @@ export function TopBar({ activeSport, onSportChange, sportCounts }: TopBarProps)
           })}
         </div>
 
-        {/* Right side: date, search, etc. */}
-        <div className="flex items-center gap-4">
+        {/* Right side: date (hidden on small) */}
+        <div className="hidden flex-shrink-0 items-center gap-4 md:flex">
           <span className="text-body-sm text-txt-tertiary">
             {new Date().toLocaleDateString('en-GB', {
               weekday: 'long',

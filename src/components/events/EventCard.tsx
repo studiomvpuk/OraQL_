@@ -53,11 +53,11 @@ export function EventCard({ event, className }: EventCardProps) {
       </div>
 
       {/* Teams */}
-      <div className="flex items-center justify-between">
-        <div className="flex-1 space-y-2">
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0 flex-1 space-y-2">
           <div className="flex items-center gap-2">
             <span className={cn(
-              'font-display text-heading tracking-tight',
+              'truncate font-display text-heading tracking-tight',
               isFinished && 'text-txt-tertiary',
             )}>
               {event.homeTeam.shortName || event.homeTeam.name}
@@ -65,7 +65,7 @@ export function EventCard({ event, className }: EventCardProps) {
           </div>
           <div className="flex items-center gap-2">
             <span className={cn(
-              'font-display text-heading tracking-tight',
+              'truncate font-display text-heading tracking-tight',
               isFinished && 'text-txt-tertiary',
             )}>
               {event.awayTeam.shortName || event.awayTeam.name}
@@ -75,7 +75,7 @@ export function EventCard({ event, className }: EventCardProps) {
 
         {/* Score (if live/finished) */}
         {(isLive || isFinished) && (
-          <div className="flex flex-col items-center gap-1 px-4">
+          <div className="flex flex-shrink-0 flex-col items-center gap-1 px-2 sm:px-4">
             <span className="font-mono text-display-sm font-bold">
               {event.homeScore ?? '-'}
             </span>
@@ -87,12 +87,12 @@ export function EventCard({ event, className }: EventCardProps) {
 
         {/* OraQL_ Pick badge */}
         {topPick && !isFinished && (
-          <div className="flex flex-col items-end gap-1">
+          <div className="flex flex-shrink-0 flex-col items-end gap-1">
             <div className="flex items-center gap-1 text-oracle-gold">
               <Star className="h-3.5 w-3.5 fill-oracle-gold" />
-              <span className="text-caption font-semibold">Top Pick</span>
+              <span className="hidden text-caption font-semibold sm:inline">Top Pick</span>
             </div>
-            <span className="text-body-sm text-txt-secondary">
+            <span className="hidden max-w-[10rem] truncate text-body-sm text-txt-secondary sm:inline">
               {topPick.market.shortName || topPick.market.name}
             </span>
             <ProbabilityBadge probability={topPick.probability} size="sm" />

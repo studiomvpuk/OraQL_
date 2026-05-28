@@ -4,6 +4,17 @@ import { create } from 'zustand';
 import { api } from '@/lib/api';
 import type { User, TokenPair } from '@/types';
 
+interface AuthResponse {
+  user: User;
+  tokenPair: TokenPair;
+  requires2FA?: boolean;
+  message?: string;
+}
+
+interface MeResponse {
+  user: User;
+}
+
 interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
@@ -21,29 +32,31 @@ interface AuthState {
   setTokens: (tokens: TokenPair) => void;
 }
 
+function persistTokens(tokens: TokenPair) {
+  api.setToken(tokens.accessToken);
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('oracle_refresh', tokens.refreshToken);
+  }
+}
+
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   isAuthenticated: false,
   isLoading: true,
 
   login: async (email, password) => {
-    const tokens = await api.post<TokenPair>('/auth/login', { email, password });
-    api.setToken(tokens.accessToken);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('oracle_refresh', tokens.refreshToken);
+    const res = await api.post<AuthResponse>('/auth/login', { email, password });
+    if (res.requires2FA) {
+      throw new Error('Two-factor authentication is required for this account.');
     }
-    const user = await api.get<User>('/auth/me');
-    set({ user, isAuthenticated: true, isLoading: false });
+    persistTokens(res.tokenPair);
+    set({ user: res.user, isAuthenticated: true, isLoading: false });
   },
 
   register: async (data) => {
-    const tokens = await api.post<TokenPair>('/auth/register', data);
-    api.setToken(tokens.accessToken);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('oracle_refresh', tokens.refreshToken);
-    }
-    const user = await api.get<User>('/auth/me');
-    set({ user, isAuthenticated: true, isLoading: false });
+    const res = await api.post<AuthResponse>('/auth/register', data);
+    persistTokens(res.tokenPair);
+    set({ user: res.user, isAuthenticated: true, isLoading: false });
   },
 
   logout: async () => {
@@ -66,17 +79,18 @@ export const useAuthStore = create<AuthState>((set) => ({
         set({ isLoading: false });
         return;
       }
-      const user = await api.get<User>('/auth/me');
-      set({ user, isAuthenticated: true, isLoading: false });
+      const res = await api.get<MeResponse>('/auth/me');
+      set({ user: res.user, isAuthenticated: true, isLoading: false });
     } catch {
+      api.setToken(null);
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('oracle_refresh');
+      }
       set({ user: null, isAuthenticated: false, isLoading: false });
     }
   },
 
   setTokens: (tokens) => {
-    api.setToken(tokens.accessToken);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('oracle_refresh', tokens.refreshToken);
-    }
+    persistTokens(tokens);
   },
 }));

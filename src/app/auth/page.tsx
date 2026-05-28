@@ -113,7 +113,7 @@ function AuthPageContent() {
       </div>
 
       {/* ─── Right Panel — Warm White Form ─── */}
-      <div className="flex flex-1 items-center justify-center bg-warm-white p-8">
+      <div className="flex flex-1 items-center justify-center bg-warm-white px-5 py-8 sm:px-8">
         <div className="w-full max-w-md">
           {/* Mobile logo */}
           <div className="mb-10 flex items-center gap-3 lg:hidden">
@@ -126,10 +126,10 @@ function AuthPageContent() {
           </div>
 
           {/* Header */}
-          <h2 className="font-display text-display-md tracking-tight">
+          <h2 className="font-display text-2xl tracking-tight sm:text-display-md">
             {mode === 'login' ? 'Welcome back' : 'Create your account'}
           </h2>
-          <p className="mt-2 text-body text-txt-secondary">
+          <p className="mt-2 text-body-sm text-txt-secondary sm:text-body">
             {mode === 'login'
               ? 'Sign in to access your dashboard and picks.'
               : 'Get started with OraQL_ in seconds.'}

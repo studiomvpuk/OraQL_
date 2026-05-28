@@ -39,7 +39,7 @@ export default function EventDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="p-6">
+      <div className="p-4 sm:p-6">
         <div className="h-64 animate-pulse rounded-oracle-lg bg-warm-cream" />
       </div>
     );
@@ -47,7 +47,7 @@ export default function EventDetailPage() {
 
   if (!event) {
     return (
-      <div className="flex h-96 items-center justify-center">
+      <div className="flex h-96 items-center justify-center px-4 text-center">
         <p className="text-txt-tertiary">Event not found.</p>
       </div>
     );
@@ -63,12 +63,12 @@ export default function EventDetailPage() {
       : event.markets.filter((m) => m.category === activeCategory);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 sm:space-y-8">
       {/* ─── Back to Dashboard Link ─── */}
-      <div className="px-6 pt-6">
+      <div className="px-4 pt-4 sm:px-6 sm:pt-6">
         <Link
           href="/dashboard"
-          className="inline-flex items-center gap-2 text-body-sm text-txt-secondary hover:text-txt-primary transition-colors"
+          className="inline-flex items-center gap-2 text-body-sm text-txt-secondary transition-colors hover:text-txt-primary"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to Dashboard
@@ -76,15 +76,18 @@ export default function EventDetailPage() {
       </div>
 
       {/* ─── Event Header (Warm Cream Surface with Decorative V) ─── */}
-      <section className="relative overflow-hidden bg-warm-cream px-6 py-8">
+      <section className="relative overflow-hidden bg-warm-cream px-4 py-6 sm:px-6 sm:py-8">
         {/* Decorative "V" letter */}
-        <div className="absolute -right-8 -top-20 text-warm-sand opacity-100" style={{ fontSize: '200px', fontWeight: 'bold', lineHeight: 1 }}>
+        <div
+          className="pointer-events-none absolute -right-8 -top-20 hidden text-warm-sand opacity-100 sm:block"
+          style={{ fontSize: '200px', fontWeight: 'bold', lineHeight: 1 }}
+        >
           V
         </div>
 
-        <div className="relative z-10 max-w-7xl mx-auto">
+        <div className="relative z-10 mx-auto max-w-7xl">
           {/* League and Round */}
-          <div className="mb-4 flex items-center gap-3 text-body-sm text-txt-secondary">
+          <div className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-1 text-body-sm text-txt-secondary">
             <span className="font-semibold">{event.league.name}</span>
             {event.round && (
               <>
@@ -94,39 +97,39 @@ export default function EventDetailPage() {
             )}
           </div>
 
-          {/* Teams and Score/Time */}
-          <div className="flex items-center justify-between gap-8">
-            <div className="flex-1">
-              <h1 className="font-display text-display-lg tracking-tight text-txt-primary">
+          {/* Teams and Score/Time — stacks on mobile, side-by-side on sm+ */}
+          <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between sm:gap-8">
+            <div className="min-w-0 flex-1">
+              <h1 className="font-display text-2xl tracking-tight text-txt-primary sm:text-3xl lg:text-display-lg">
                 {event.homeTeam.name}
               </h1>
-              <p className="my-3 text-body text-txt-tertiary">vs</p>
-              <h1 className="font-display text-display-lg tracking-tight text-txt-primary">
+              <p className="my-2 text-body text-txt-tertiary sm:my-3">vs</p>
+              <h1 className="font-display text-2xl tracking-tight text-txt-primary sm:text-3xl lg:text-display-lg">
                 {event.awayTeam.name}
               </h1>
             </div>
 
             {/* Score / Time / Venue */}
-            <div className="flex flex-col items-end justify-center gap-4">
+            <div className="flex flex-col items-start gap-4 sm:items-end sm:justify-center">
               {isLive ? (
-                <div className="text-right">
-                  <div className="mb-2 flex items-center justify-end gap-2">
+                <div className="sm:text-right">
+                  <div className="mb-2 flex items-center gap-2 sm:justify-end">
                     <span className="text-caption font-semibold text-live">LIVE</span>
                     <span className="live-dot" />
                   </div>
-                  <p className="font-mono text-display-xl font-bold text-txt-primary">
+                  <p className="font-mono text-4xl font-bold text-txt-primary sm:text-display-xl">
                     {event.homeScore ?? 0} — {event.awayScore ?? 0}
                   </p>
                 </div>
               ) : (
-                <div className="space-y-3 text-right">
-                  <div className="flex items-center justify-end gap-2 text-txt-secondary">
+                <div className="space-y-3 sm:text-right">
+                  <div className="flex items-center gap-2 text-txt-secondary sm:justify-end">
                     <Clock className="h-4 w-4" />
                     <span className="text-body-sm">{formatKickoff(event.kickoffAt)}</span>
                   </div>
                   {event.venue && (
-                    <div className="flex items-center justify-end gap-2 text-txt-tertiary">
-                      <MapPin className="h-4 w-4" />
+                    <div className="flex items-center gap-2 text-txt-tertiary sm:justify-end">
+                      <MapPin className="h-4 w-4 flex-shrink-0" />
                       <span className="text-body-sm">{event.venue}</span>
                     </div>
                   )}
@@ -138,8 +141,8 @@ export default function EventDetailPage() {
       </section>
 
       {/* ─── Two-Column Layout ─── */}
-      <div className="px-6 pb-6">
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-3 max-w-7xl mx-auto">
+      <div className="px-4 pb-6 sm:px-6">
+        <div className="mx-auto grid max-w-7xl grid-cols-1 gap-8 lg:grid-cols-3">
           {/* ─── Left Column: OraQL_ Picks ─── */}
           <div className="lg:col-span-1 space-y-6">
             <div className="flex items-center gap-3">

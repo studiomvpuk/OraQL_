@@ -11,23 +11,22 @@ const API_PREFIX = '/api/v1';
 class ApiClient {
   private accessToken: string | null = null;
 
-  setToken(token: string | null) {
-    this.accessToken = token;
-    if (token) {
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('oracle_token', token);
-      }
+  setToken(token: string | null | undefined) {
+    const valid = typeof token === 'string' && token.length > 0 && token !== 'undefined' && token !== 'null';
+    this.accessToken = valid ? (token as string) : null;
+    if (typeof window === 'undefined') return;
+    if (valid) {
+      localStorage.setItem('oracle_token', token as string);
     } else {
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem('oracle_token');
-      }
+      localStorage.removeItem('oracle_token');
     }
   }
 
   getToken(): string | null {
     if (this.accessToken) return this.accessToken;
     if (typeof window !== 'undefined') {
-      return localStorage.getItem('oracle_token');
+      const stored = localStorage.getItem('oracle_token');
+      if (stored && stored !== 'undefined' && stored !== 'null') return stored;
     }
     return null;
   }
@@ -58,11 +57,8 @@ class ApiClient {
       const error = await response.json().catch(() => ({ message: 'Request failed' }));
 
       if (response.status === 401) {
-        // Token expired — attempt refresh or redirect to login
+        // Clear stale token; AuthGuard will route to /auth via the router.
         this.setToken(null);
-        if (typeof window !== 'undefined') {
-          window.location.href = '/auth';
-        }
       }
 
       throw new ApiError(response.status, error.message || 'Request failed', error.errors);
