@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { Star, TrendingUp, Zap, BarChart3 } from 'lucide-react';
+import Link from 'next/link';
 import { TopBar } from '@/components/layout/TopBar';
 import { EventCard } from '@/components/events/EventCard';
 import { PickCard } from '@/components/picks/PickCard';
@@ -125,7 +126,13 @@ export default function DashboardPage() {
             ) : topPicks.length > 0 ? (
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {topPicks.map((pick) => (
-                  <PickCard key={pick.id} pick={pick} variant="dark" showEvent />
+                  <Link
+                    key={pick.id}
+                    href={pick.event?.id ? `/events/${pick.event.id}` : '#'}
+                    className="block transition-transform duration-200 hover:-translate-y-1"
+                  >
+                    <PickCard pick={pick} variant="dark" showEvent />
+                  </Link>
                 ))}
               </div>
             ) : (
