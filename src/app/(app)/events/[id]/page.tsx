@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import {
   ArrowLeft,
@@ -13,6 +13,7 @@ import {
   Shield,
   AlertTriangle,
   Plus,
+  Check,
   ChevronDown,
   ChevronUp,
 } from 'lucide-react';
@@ -580,9 +581,42 @@ function MarketCard({
   direction?: 'OVER' | 'UNDER';
 }) {
   const tier = getProbabilityTier(market.probability);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const [added, setAdded] = useState(false);
+
+  // Close dropdown when clicking anywhere outside
+  useEffect(() => {
+    if (!isExpanded) return;
+    function handleClickOutside(e: MouseEvent) {
+      if (cardRef.current && !cardRef.current.contains(e.target as Node)) {
+        onToggle(); // close
+      }
+    }
+    // Use a short delay so the same click that opened it doesn't immediately close it
+    const timer = setTimeout(() => {
+      document.addEventListener('mousedown', handleClickOutside);
+    }, 10);
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isExpanded, onToggle]);
+
+  const handleAdd = async () => {
+    try {
+      await onAdd();
+      setAdded(true);
+      setTimeout(() => {
+        setAdded(false);
+        onToggle(); // close after adding
+      }, 1200);
+    } catch {
+      // Error is handled by the store
+    }
+  };
 
   return (
-    <div className="relative">
+    <div className="relative" ref={cardRef}>
       <div
         className={cn(
           'rounded-oracle-md border transition-all duration-200',
@@ -672,12 +706,27 @@ function MarketCard({
           <button
             onClick={(e) => {
               e.stopPropagation();
-              onAdd();
+              handleAdd();
             }}
-            className="flex w-full items-center justify-center gap-2 rounded-oracle-sm bg-dark-ink px-4 py-2.5 text-body-sm font-semibold text-txt-inverse transition-colors hover:bg-dark-charcoal"
+            disabled={added}
+            className={cn(
+              'flex w-full items-center justify-center gap-2 rounded-oracle-sm px-4 py-2.5 text-body-sm font-semibold transition-colors',
+              added
+                ? 'bg-prob-high/20 text-prob-high'
+                : 'bg-dark-ink text-txt-inverse hover:bg-dark-charcoal',
+            )}
           >
-            <Plus className="h-4 w-4" />
-            Add to Bet Builder
+            {added ? (
+              <>
+                <Check className="h-4 w-4" />
+                Added!
+              </>
+            ) : (
+              <>
+                <Plus className="h-4 w-4" />
+                Add to Bet Builder
+              </>
+            )}
           </button>
         </div>
       )}

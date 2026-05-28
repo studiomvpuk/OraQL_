@@ -47,12 +47,26 @@ export const useBuilderStore = create<BuilderStore>((set, get) => ({
 
   remove: async (marketId) => {
     set({ error: null });
+    // Optimistic removal — update UI immediately, then sync with backend
+    const prev = {
+      selections: get().selections,
+      count: get().count,
+      combinedProbability: get().combinedProbability,
+    };
+    const updated = prev.selections.filter((s) => s.market.id !== marketId);
+    const probs = updated.map((s) => s.market.probability || 0);
+    set({
+      selections: updated,
+      count: updated.length,
+      combinedProbability: probs.length > 0 ? probs.reduce((a, b) => a * b, 1) : 1,
+    });
     try {
       const data = await api.delete<BuilderState>(`/builder/remove/${marketId}`);
       set({ ...data });
     } catch (err: any) {
-      const message = err?.response?.data?.message || err?.message || 'Failed to remove selection';
-      set({ error: message });
+      // Revert on failure
+      console.error('Remove failed:', err?.message || err);
+      set({ ...prev, error: err?.message || 'Failed to remove selection' });
     }
   },
 

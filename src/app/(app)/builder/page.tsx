@@ -12,6 +12,7 @@ export default function BuilderPage() {
   const { selections, count, combinedProbability, load, remove, clear, exportText, isLoading } =
     useBuilderStore();
   const [copied, setCopied] = useState(false);
+  const [showExportText, setShowExportText] = useState<string | null>(null);
 
   useEffect(() => {
     load();
@@ -20,11 +21,20 @@ export default function BuilderPage() {
   const handleExport = async () => {
     try {
       const text = await exportText();
-      await navigator.clipboard.writeText(text);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(text);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2500);
+      } else {
+        setShowExportText(text);
+      }
     } catch {
-      // fallback
+      try {
+        const text = await exportText();
+        setShowExportText(text);
+      } catch {
+        // truly failed
+      }
     }
   };
 

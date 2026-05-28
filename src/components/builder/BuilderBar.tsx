@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Layers, X, Copy, Trash2, ChevronUp } from 'lucide-react';
+import { Layers, X, Copy, Check, Trash2, ChevronUp } from 'lucide-react';
 import { cn, formatProbability } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
 import { ProbabilityBadge } from '@/components/ui/ProbabilityBadge';
@@ -12,17 +12,41 @@ export function BuilderBar() {
     useBuilderStore();
   const [expanded, setExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [showExportText, setShowExportText] = useState<string | null>(null);
 
   if (count === 0) return null;
 
   const handleExport = async () => {
     try {
       const text = await exportText();
-      await navigator.clipboard.writeText(text);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      // Try clipboard first
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(text);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2500);
+      } else {
+        // Fallback: show the text so user can copy manually
+        setShowExportText(text);
+      }
     } catch {
-      // fallback
+      // If clipboard fails, try the legacy approach
+      try {
+        const text = await exportText();
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2500);
+      } catch {
+        // Last resort: show text in a prompt-like overlay
+        const text = await exportText().catch(() => null);
+        if (text) setShowExportText(text);
+      }
     }
   };
 
@@ -107,12 +131,57 @@ export function BuilderBar() {
               <Trash2 className="h-4 w-4" />
             </button>
             <Button variant="gold" size="sm" onClick={handleExport}>
-              <Copy className="h-4 w-4" />
+              {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
               <span className="hidden sm:inline">{copied ? 'Copied!' : 'Export'}</span>
             </Button>
           </div>
         </div>
       </div>
+
+      {/* Fallback export overlay — shown when clipboard isn't available */}
+      {showExportText && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+          onClick={() => setShowExportText(null)}
+        >
+          <div
+            className="w-full max-w-md rounded-oracle-lg bg-white p-5 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="mb-3 font-display text-heading font-semibold text-txt-primary">
+              Your Bet Slip
+            </h3>
+            <textarea
+              readOnly
+              value={showExportText}
+              className="h-56 w-full resize-none rounded-oracle-sm border border-warm-sand bg-warm-cream p-3 font-mono text-body-sm text-txt-primary focus:outline-none"
+              onFocus={(e) => e.target.select()}
+            />
+            <div className="mt-3 flex gap-2">
+              <button
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(showExportText);
+                    setCopied(true);
+                    setTimeout(() => { setCopied(false); setShowExportText(null); }, 1500);
+                  } catch {
+                    // textarea is already selected for manual copy
+                  }
+                }}
+                className="flex-1 rounded-oracle-sm bg-dark-ink px-4 py-2.5 text-body-sm font-semibold text-txt-inverse transition-colors hover:bg-dark-charcoal"
+              >
+                {copied ? 'Copied!' : 'Copy to Clipboard'}
+              </button>
+              <button
+                onClick={() => setShowExportText(null)}
+                className="rounded-oracle-sm border border-warm-sand px-4 py-2.5 text-body-sm font-medium text-txt-secondary transition-colors hover:bg-warm-cream"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
