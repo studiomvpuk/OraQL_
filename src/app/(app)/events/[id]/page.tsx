@@ -582,67 +582,69 @@ function MarketCard({
   const tier = getProbabilityTier(market.probability);
 
   return (
-    <div
-      className={cn(
-        'rounded-oracle-md border transition-all duration-200',
-        isExpanded
-          ? 'border-oracle-gold bg-oracle-gold/[0.04] shadow-soft'
-          : 'border-warm-sand bg-white hover:border-warm-stone',
-      )}
-    >
-      {/* Clickable header */}
-      <button
-        onClick={onToggle}
-        className="flex w-full items-center gap-3 px-4 py-3 text-left"
+    <div className="relative">
+      <div
+        className={cn(
+          'rounded-oracle-md border transition-all duration-200',
+          isExpanded
+            ? 'border-oracle-gold bg-oracle-gold/[0.04] shadow-soft'
+            : 'border-warm-sand bg-white hover:border-warm-stone',
+        )}
       >
-        {/* Direction badge */}
-        {direction && (
-          <span
-            className={cn(
-              'flex-shrink-0 rounded px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide',
-              direction === 'OVER'
-                ? 'bg-prob-high/15 text-prob-high'
-                : 'bg-blue-100 text-blue-600',
-            )}
-          >
-            {direction}
-          </span>
-        )}
-
-        {/* Name */}
-        <span className="flex-1 truncate text-body-sm font-medium text-txt-primary">
-          {market.shortName || market.name}
-        </span>
-
-        {/* Value badge */}
-        {market.isValueBet && (
-          <span className="rounded-full bg-value/15 px-2 py-0.5 text-[10px] font-bold text-value">
-            VALUE
-          </span>
-        )}
-
-        {/* Probability */}
-        <span
-          className={cn('font-mono text-body-sm font-semibold', {
-            'text-prob-high': tier === 'high',
-            'text-prob-mid': tier === 'mid',
-            'text-txt-tertiary': tier === 'low',
-          })}
+        {/* Clickable header */}
+        <button
+          onClick={onToggle}
+          className="flex w-full items-center gap-3 px-4 py-3 text-left"
         >
-          {formatProbability(market.probability)}
-        </span>
+          {/* Direction badge */}
+          {direction && (
+            <span
+              className={cn(
+                'flex-shrink-0 rounded px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide',
+                direction === 'OVER'
+                  ? 'bg-prob-high/15 text-prob-high'
+                  : 'bg-blue-100 text-blue-600',
+              )}
+            >
+              {direction}
+            </span>
+          )}
 
-        {/* Expand chevron */}
-        {isExpanded ? (
-          <ChevronUp className="h-4 w-4 flex-shrink-0 text-txt-tertiary" />
-        ) : (
-          <ChevronDown className="h-4 w-4 flex-shrink-0 text-txt-tertiary" />
-        )}
-      </button>
+          {/* Name */}
+          <span className="flex-1 truncate text-body-sm font-medium text-txt-primary">
+            {market.shortName || market.name}
+          </span>
 
-      {/* Expanded detail — inline dropdown */}
+          {/* Value badge */}
+          {market.isValueBet && (
+            <span className="rounded-full bg-value/15 px-2 py-0.5 text-[10px] font-bold text-value">
+              VALUE
+            </span>
+          )}
+
+          {/* Probability */}
+          <span
+            className={cn('font-mono text-body-sm font-semibold', {
+              'text-prob-high': tier === 'high',
+              'text-prob-mid': tier === 'mid',
+              'text-txt-tertiary': tier === 'low',
+            })}
+          >
+            {formatProbability(market.probability)}
+          </span>
+
+          {/* Expand chevron */}
+          {isExpanded ? (
+            <ChevronUp className="h-4 w-4 flex-shrink-0 text-txt-tertiary" />
+          ) : (
+            <ChevronDown className="h-4 w-4 flex-shrink-0 text-txt-tertiary" />
+          )}
+        </button>
+      </div>
+
+      {/* Expanded detail — overlay dropdown */}
       {isExpanded && (
-        <div className="border-t border-oracle-gold/20 px-4 py-3 space-y-3">
+        <div className="absolute left-0 right-0 top-full z-30 mt-1 rounded-oracle-md border border-oracle-gold bg-white p-4 shadow-lg space-y-3">
           {/* Explanation */}
           {market.explanation && (
             <div className="space-y-2">
