@@ -12,11 +12,13 @@ import {
   TrendingUp,
   Shield,
   AlertTriangle,
+  Plus,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import Link from 'next/link';
 import { cn, formatKickoff, formatCategory, formatProbability, getProbabilityTier } from '@/lib/utils';
 import { PickCard } from '@/components/picks/PickCard';
-import { MarketChip } from '@/components/markets/MarketChip';
 import { ProbabilityBadge } from '@/components/ui/ProbabilityBadge';
 import { Button } from '@/components/ui/Button';
 import { api } from '@/lib/api';
@@ -31,7 +33,7 @@ export default function EventDetailPage() {
   const [event, setEvent] = useState<EventDetail | null>(null);
   const [activeTab, setActiveTab] = useState<TabId>('markets');
   const [activeCategory, setActiveCategory] = useState<MarketCategory | 'ALL'>('ALL');
-  const [selectedMarket, setSelectedMarket] = useState<Market | null>(null);
+  const [expandedMarketId, setExpandedMarketId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const addToBuilder = useBuilderStore((s) => s.add);
 
@@ -257,108 +259,16 @@ export default function EventDetailPage() {
 
             {/* ── Markets Tab ── */}
             {activeTab === 'markets' && (
-              <div className="space-y-6">
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    onClick={() => setActiveCategory('ALL')}
-                    className={cn(
-                      'rounded-full px-4 py-2 text-body-sm font-medium transition-all duration-200',
-                      activeCategory === 'ALL'
-                        ? 'bg-warm-white text-txt-primary shadow-soft'
-                        : 'bg-warm-cream text-txt-secondary hover:bg-warm-sand',
-                    )}
-                  >
-                    All
-                  </button>
-                  {categories.map((cat) => (
-                    <button
-                      key={cat}
-                      onClick={() => setActiveCategory(cat)}
-                      className={cn(
-                        'rounded-full px-4 py-2 text-body-sm font-medium transition-all duration-200',
-                        activeCategory === cat
-                          ? 'bg-warm-white text-txt-primary shadow-soft'
-                          : 'bg-warm-cream text-txt-secondary hover:bg-warm-sand',
-                      )}
-                    >
-                      {formatCategory(cat)}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="rounded-oracle-md bg-warm-white p-4 space-y-2">
-                  {filteredMarkets.length > 0 ? (
-                    filteredMarkets.map((market) => (
-                      <MarketChip
-                        key={market.id}
-                        market={market}
-                        isSelected={selectedMarket?.id === market.id}
-                        onClick={() => setSelectedMarket(market)}
-                        variant="light"
-                      />
-                    ))
-                  ) : (
-                    <div className="py-8 text-center">
-                      <p className="text-body-sm text-txt-tertiary">
-                        No markets available for this category.
-                      </p>
-                    </div>
-                  )}
-                </div>
-
-                {selectedMarket && (
-                  <div className="rounded-oracle-md border-2 border-oracle-gold bg-oracle-gold/[0.04] p-6 animate-fade-in space-y-4">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1">
-                        <h3 className="font-display text-heading tracking-tight text-txt-primary">
-                          {selectedMarket.name}
-                          {selectedMarket.line != null && (
-                            <span className="ml-2 text-body text-txt-secondary font-normal">
-                              Line: {selectedMarket.line}
-                            </span>
-                          )}
-                        </h3>
-                        <p className="mt-1 text-body-sm text-txt-secondary">
-                          {formatCategory(selectedMarket.category)}
-                        </p>
-                      </div>
-                      <div className="flex-shrink-0">
-                        <ProbabilityBadge
-                          probability={selectedMarket.probability}
-                          isValueBet={selectedMarket.isValueBet}
-                          size="lg"
-                        />
-                      </div>
-                    </div>
-
-                    {selectedMarket.explanation && (
-                      <div className="space-y-2">
-                        {selectedMarket.explanation.split(/\[Caveat\]\s*/).map((part, i) =>
-                          i === 0 ? (
-                            part ? <p key={i} className="text-body-sm text-txt-secondary leading-relaxed">{part.trim()}</p> : null
-                          ) : (
-                            <div key={i} className="flex items-start gap-2 rounded-oracle-sm bg-oracle-gold/10 px-3 py-2 text-body-sm text-oracle-gold-dark">
-                              <AlertTriangle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
-                              <span>{part.trim()}</span>
-                            </div>
-                          ),
-                        )}
-                      </div>
-                    )}
-
-                    <div className="pt-2">
-                      <Button
-                        variant="primary"
-                        size="md"
-                        onClick={() => addToBuilder(selectedMarket.id)}
-                        className="w-full"
-                      >
-                        Add to Bet Builder
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </div>
+              <MarketsTab
+                markets={event.markets}
+                categories={categories}
+                activeCategory={activeCategory}
+                setActiveCategory={setActiveCategory}
+                filteredMarkets={filteredMarkets}
+                expandedMarketId={expandedMarketId}
+                setExpandedMarketId={setExpandedMarketId}
+                addToBuilder={addToBuilder}
+              />
             )}
 
             {/* ── Odds Tab ── */}
@@ -470,6 +380,305 @@ export default function EventDetailPage() {
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+/* ─── Markets Tab Component ─── */
+function MarketsTab({
+  markets,
+  categories,
+  activeCategory,
+  setActiveCategory,
+  filteredMarkets,
+  expandedMarketId,
+  setExpandedMarketId,
+  addToBuilder,
+}: {
+  markets: Market[];
+  categories: string[];
+  activeCategory: string;
+  setActiveCategory: (cat: MarketCategory | 'ALL') => void;
+  filteredMarkets: Market[];
+  expandedMarketId: string | null;
+  setExpandedMarketId: (id: string | null) => void;
+  addToBuilder: (id: string) => Promise<void>;
+}) {
+  /**
+   * Group markets by category + line into paired Over/Under rows.
+   * E.g. GOALS line 2.5 → { over: Market, under: Market }
+   * Non-Over/Under markets (MATCH_RESULT, BTTS) appear as standalone.
+   */
+  const groupedSections = (() => {
+    type MarketGroup = {
+      label: string;
+      category: string;
+      line?: number;
+      over?: Market;
+      under?: Market;
+      standalone?: Market;
+    };
+
+    const groups = new Map<string, MarketGroup>();
+
+    filteredMarkets.forEach((m) => {
+      const isOver = m.name.includes('OVER');
+      const isUnder = m.name.includes('UNDER');
+      const baseName = m.name.replace(/_OVER|_UNDER/, '');
+
+      if (isOver || isUnder) {
+        const key = `${baseName}|${m.line ?? ''}`;
+        const existing = groups.get(key) || {
+          label: `${formatCategory(m.category)}${m.line != null ? ` ${m.line}` : ''}`,
+          category: m.category,
+          line: m.line,
+        };
+        if (isOver) existing.over = m;
+        if (isUnder) existing.under = m;
+        groups.set(key, existing);
+      } else {
+        const key = `standalone|${m.id}`;
+        groups.set(key, {
+          label: m.shortName || m.name,
+          category: m.category,
+          standalone: m,
+        });
+      }
+    });
+
+    return Array.from(groups.values());
+  })();
+
+  // Group the paired rows by category
+  const byCat = new Map<string, typeof groupedSections>();
+  groupedSections.forEach((g) => {
+    const cat = g.category;
+    if (!byCat.has(cat)) byCat.set(cat, []);
+    byCat.get(cat)!.push(g);
+  });
+
+  return (
+    <div className="space-y-6">
+      {/* Category filter pills */}
+      <div className="flex flex-wrap gap-2">
+        <button
+          onClick={() => setActiveCategory('ALL')}
+          className={cn(
+            'rounded-full px-4 py-2 text-body-sm font-medium transition-all duration-200',
+            activeCategory === 'ALL'
+              ? 'bg-warm-white text-txt-primary shadow-soft'
+              : 'bg-warm-cream text-txt-secondary hover:bg-warm-sand',
+          )}
+        >
+          All
+        </button>
+        {categories.map((cat) => (
+          <button
+            key={cat}
+            onClick={() => setActiveCategory(cat as MarketCategory)}
+            className={cn(
+              'rounded-full px-4 py-2 text-body-sm font-medium transition-all duration-200',
+              activeCategory === cat
+                ? 'bg-warm-white text-txt-primary shadow-soft'
+                : 'bg-warm-cream text-txt-secondary hover:bg-warm-sand',
+            )}
+          >
+            {formatCategory(cat)}
+          </button>
+        ))}
+      </div>
+
+      {/* Markets grouped by category */}
+      {filteredMarkets.length === 0 ? (
+        <div className="rounded-oracle-md bg-warm-white py-8 text-center">
+          <p className="text-body-sm text-txt-tertiary">No markets available for this category.</p>
+        </div>
+      ) : (
+        Array.from(byCat.entries()).map(([cat, groups]) => (
+          <div key={cat} className="space-y-3">
+            {/* Category header */}
+            <h3 className="text-body-xs font-mono uppercase tracking-widest text-txt-tertiary font-semibold">
+              {formatCategory(cat)}
+            </h3>
+
+            {/* Market rows */}
+            <div className="space-y-2">
+              {groups.map((group, gi) => {
+                if (group.standalone) {
+                  // Standalone market (BTTS, MATCH_RESULT)
+                  const m = group.standalone;
+                  const isExpanded = expandedMarketId === m.id;
+                  return (
+                    <MarketCard
+                      key={m.id}
+                      market={m}
+                      isExpanded={isExpanded}
+                      onToggle={() => setExpandedMarketId(isExpanded ? null : m.id)}
+                      onAdd={() => addToBuilder(m.id)}
+                    />
+                  );
+                }
+
+                // Over/Under pair — side by side
+                return (
+                  <div key={`pair-${gi}`} className="space-y-2">
+                    {/* Line label */}
+                    <p className="text-caption font-medium text-txt-secondary pl-1">
+                      Line {group.line}
+                    </p>
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                      {group.over && (
+                        <MarketCard
+                          market={group.over}
+                          isExpanded={expandedMarketId === group.over.id}
+                          onToggle={() =>
+                            setExpandedMarketId(
+                              expandedMarketId === group.over!.id ? null : group.over!.id,
+                            )
+                          }
+                          onAdd={() => addToBuilder(group.over!.id)}
+                          direction="OVER"
+                        />
+                      )}
+                      {group.under && (
+                        <MarketCard
+                          market={group.under}
+                          isExpanded={expandedMarketId === group.under.id}
+                          onToggle={() =>
+                            setExpandedMarketId(
+                              expandedMarketId === group.under!.id ? null : group.under!.id,
+                            )
+                          }
+                          onAdd={() => addToBuilder(group.under!.id)}
+                          direction="UNDER"
+                        />
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ))
+      )}
+    </div>
+  );
+}
+
+/* ─── Individual Market Card with inline expand ─── */
+function MarketCard({
+  market,
+  isExpanded,
+  onToggle,
+  onAdd,
+  direction,
+}: {
+  market: Market;
+  isExpanded: boolean;
+  onToggle: () => void;
+  onAdd: () => void;
+  direction?: 'OVER' | 'UNDER';
+}) {
+  const tier = getProbabilityTier(market.probability);
+
+  return (
+    <div
+      className={cn(
+        'rounded-oracle-md border transition-all duration-200',
+        isExpanded
+          ? 'border-oracle-gold bg-oracle-gold/[0.04] shadow-soft'
+          : 'border-warm-sand bg-white hover:border-warm-stone',
+      )}
+    >
+      {/* Clickable header */}
+      <button
+        onClick={onToggle}
+        className="flex w-full items-center gap-3 px-4 py-3 text-left"
+      >
+        {/* Direction badge */}
+        {direction && (
+          <span
+            className={cn(
+              'flex-shrink-0 rounded px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide',
+              direction === 'OVER'
+                ? 'bg-prob-high/15 text-prob-high'
+                : 'bg-blue-100 text-blue-600',
+            )}
+          >
+            {direction}
+          </span>
+        )}
+
+        {/* Name */}
+        <span className="flex-1 truncate text-body-sm font-medium text-txt-primary">
+          {market.shortName || market.name}
+        </span>
+
+        {/* Value badge */}
+        {market.isValueBet && (
+          <span className="rounded-full bg-value/15 px-2 py-0.5 text-[10px] font-bold text-value">
+            VALUE
+          </span>
+        )}
+
+        {/* Probability */}
+        <span
+          className={cn('font-mono text-body-sm font-semibold', {
+            'text-prob-high': tier === 'high',
+            'text-prob-mid': tier === 'mid',
+            'text-txt-tertiary': tier === 'low',
+          })}
+        >
+          {formatProbability(market.probability)}
+        </span>
+
+        {/* Expand chevron */}
+        {isExpanded ? (
+          <ChevronUp className="h-4 w-4 flex-shrink-0 text-txt-tertiary" />
+        ) : (
+          <ChevronDown className="h-4 w-4 flex-shrink-0 text-txt-tertiary" />
+        )}
+      </button>
+
+      {/* Expanded detail — inline dropdown */}
+      {isExpanded && (
+        <div className="border-t border-oracle-gold/20 px-4 py-3 space-y-3">
+          {/* Explanation */}
+          {market.explanation && (
+            <div className="space-y-2">
+              {market.explanation.split(/\[Caveat\]\s*/).map((part, i) =>
+                i === 0 ? (
+                  part ? (
+                    <p key={i} className="text-body-sm text-txt-secondary leading-relaxed">
+                      {part.trim()}
+                    </p>
+                  ) : null
+                ) : (
+                  <div
+                    key={i}
+                    className="flex items-start gap-2 rounded-oracle-sm bg-oracle-gold/10 px-3 py-2 text-body-sm text-oracle-gold-dark"
+                  >
+                    <AlertTriangle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
+                    <span>{part.trim()}</span>
+                  </div>
+                ),
+              )}
+            </div>
+          )}
+
+          {/* Add to Builder button */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onAdd();
+            }}
+            className="flex w-full items-center justify-center gap-2 rounded-oracle-sm bg-dark-ink px-4 py-2.5 text-body-sm font-semibold text-txt-inverse transition-colors hover:bg-dark-charcoal"
+          >
+            <Plus className="h-4 w-4" />
+            Add to Bet Builder
+          </button>
+        </div>
+      )}
     </div>
   );
 }
