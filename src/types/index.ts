@@ -64,11 +64,22 @@ export interface Event {
   picks?: PickSummary[];
 }
 
+export interface BookmakerOdds {
+  id: string;
+  bookmaker: string;
+  marketName: string;
+  line?: number;
+  odds: number;
+  impliedProbability?: number;
+  lastUpdatedAt: string;
+}
+
 export interface EventDetail extends Event {
   markets: Market[];
   picks: Pick[];
   lineups: Lineup[];
   matchStats: MatchStat[];
+  bookmakerOdds: BookmakerOdds[];
 }
 
 export interface Market {
@@ -111,8 +122,10 @@ export interface PickSummary {
 export interface Lineup {
   id: string;
   teamId: string;
+  team?: Team;
   formation?: string;
   isConfirmed: boolean;
+  confirmedAt?: string;
   entries: LineupEntry[];
 }
 
