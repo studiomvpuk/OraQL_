@@ -11,6 +11,7 @@ import {
   BarChart3,
   TrendingUp,
   Shield,
+  AlertTriangle,
 } from 'lucide-react';
 import Link from 'next/link';
 import { cn, formatKickoff, formatCategory, formatProbability, getProbabilityTier } from '@/lib/utils';
@@ -140,13 +141,31 @@ export default function EventDetailPage() {
 
           <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between sm:gap-8">
             <div className="min-w-0 flex-1">
-              <h1 className="font-display text-2xl tracking-tight text-txt-primary sm:text-3xl lg:text-display-lg">
-                {event.homeTeam.name}
-              </h1>
-              <p className="my-2 text-body text-txt-tertiary sm:my-3">vs</p>
-              <h1 className="font-display text-2xl tracking-tight text-txt-primary sm:text-3xl lg:text-display-lg">
-                {event.awayTeam.name}
-              </h1>
+              <div className="flex items-center gap-3">
+                {event.homeTeam.logoUrl ? (
+                  <img src={event.homeTeam.logoUrl} alt="" className="h-8 w-8 object-contain sm:h-10 sm:w-10" />
+                ) : (
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-warm-stone/20 text-xs font-bold text-txt-secondary sm:h-10 sm:w-10">
+                    {event.homeTeam.shortName || event.homeTeam.name.charAt(0)}
+                  </div>
+                )}
+                <h1 className="font-display text-2xl tracking-tight text-txt-primary sm:text-3xl lg:text-display-lg">
+                  {event.homeTeam.name}
+                </h1>
+              </div>
+              <p className="my-2 pl-11 text-body text-txt-tertiary sm:my-3 sm:pl-[52px]">vs</p>
+              <div className="flex items-center gap-3">
+                {event.awayTeam.logoUrl ? (
+                  <img src={event.awayTeam.logoUrl} alt="" className="h-8 w-8 object-contain sm:h-10 sm:w-10" />
+                ) : (
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-warm-stone/20 text-xs font-bold text-txt-secondary sm:h-10 sm:w-10">
+                    {event.awayTeam.shortName || event.awayTeam.name.charAt(0)}
+                  </div>
+                )}
+                <h1 className="font-display text-2xl tracking-tight text-txt-primary sm:text-3xl lg:text-display-lg">
+                  {event.awayTeam.name}
+                </h1>
+              </div>
             </div>
 
             <div className="flex flex-col items-start gap-4 sm:items-end sm:justify-center">
@@ -313,9 +332,18 @@ export default function EventDetailPage() {
                     </div>
 
                     {selectedMarket.explanation && (
-                      <p className="text-body-sm text-txt-secondary leading-relaxed">
-                        {selectedMarket.explanation}
-                      </p>
+                      <div className="space-y-2">
+                        {selectedMarket.explanation.split(/\[Caveat\]\s*/).map((part, i) =>
+                          i === 0 ? (
+                            part ? <p key={i} className="text-body-sm text-txt-secondary leading-relaxed">{part.trim()}</p> : null
+                          ) : (
+                            <div key={i} className="flex items-start gap-2 rounded-oracle-sm bg-oracle-gold/10 px-3 py-2 text-body-sm text-oracle-gold-dark">
+                              <AlertTriangle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
+                              <span>{part.trim()}</span>
+                            </div>
+                          ),
+                        )}
+                      </div>
                     )}
 
                     <div className="pt-2">

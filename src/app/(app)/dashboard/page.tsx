@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { Star, TrendingUp, Zap, BarChart3 } from 'lucide-react';
+import { Star, TrendingUp, Zap, BarChart3, CheckCircle } from 'lucide-react';
 import Link from 'next/link';
 import { TopBar } from '@/components/layout/TopBar';
 import { EventCard } from '@/components/events/EventCard';
@@ -69,8 +69,27 @@ export default function DashboardPage() {
     );
   }, [events, selectedLeagues]);
 
-  // Group filtered events by league
-  const groupedEvents = filteredEvents.reduce(
+  // Split into upcoming/live vs completed
+  const upcomingEvents = filteredEvents.filter(
+    (e) => e.status !== 'FINISHED' && e.status !== 'CANCELLED',
+  );
+  const completedEvents = filteredEvents.filter(
+    (e) => e.status === 'FINISHED' || e.status === 'CANCELLED',
+  );
+
+  // Group upcoming events by league
+  const groupedEvents = upcomingEvents.reduce(
+    (acc, event) => {
+      const key = event.league.name;
+      if (!acc[key]) acc[key] = [];
+      acc[key].push(event);
+      return acc;
+    },
+    {} as Record<string, Event[]>,
+  );
+
+  // Group completed events by league
+  const groupedCompleted = completedEvents.reduce(
     (acc, event) => {
       const key = event.league.name;
       if (!acc[key]) acc[key] = [];
@@ -158,7 +177,7 @@ export default function DashboardPage() {
                 </h2>
               </div>
               <span className="inline-flex items-center rounded-oracle-md bg-warm-cream px-3 py-1.5 font-body text-body-sm font-semibold text-txt-secondary sm:px-4 sm:py-2">
-                {filteredEvents.length} {filteredEvents.length === 1 ? 'match' : 'matches'}
+                {upcomingEvents.length} upcoming
               </span>
               {leagues.length > 1 && (
                 <LeagueFilter
@@ -186,21 +205,18 @@ export default function DashboardPage() {
                   </div>
                 ))}
               </div>
-            ) : Object.keys(groupedEvents).length > 0 ? (
+            ) : Object.keys(groupedEvents).length > 0 || Object.keys(groupedCompleted).length > 0 ? (
               <div className="space-y-10">
+                {/* Upcoming / Live events */}
                 {Object.entries(groupedEvents).map(([league, leagueEvents]) => (
                   <div key={league}>
-                    {/* League Name Header */}
                     <h3 className="text-body-xs font-mono uppercase tracking-widest text-txt-tertiary mb-4 font-semibold">
                       {league}
                     </h3>
-
-                    {/* Events for This League */}
                     <div className="space-y-3">
                       {leagueEvents.map((event) => (
                         <div key={event.id} className="group relative">
                           <EventCard event={event} />
-                          {/* Gold left-border on hover - via before pseudo-element */}
                           <div
                             className="absolute left-0 top-0 bottom-0 w-1 bg-oracle-gold rounded-l-oracle-md opacity-0 group-hover:opacity-100 transition-opacity duration-200"
                             aria-hidden="true"
@@ -210,6 +226,37 @@ export default function DashboardPage() {
                     </div>
                   </div>
                 ))}
+
+                {/* Completed Section */}
+                {Object.keys(groupedCompleted).length > 0 && (
+                  <div className="mt-8 pt-8 border-t border-warm-sand">
+                    <div className="mb-6 flex items-center gap-2">
+                      <CheckCircle className="h-4 w-4 text-warm-stone/60" />
+                      <h3 className="font-display text-lg tracking-tight text-txt-tertiary">
+                        Completed
+                      </h3>
+                      <span className="text-body-xs text-txt-tertiary">
+                        ({completedEvents.length})
+                      </span>
+                    </div>
+                    <div className="space-y-8 opacity-60">
+                      {Object.entries(groupedCompleted).map(([league, leagueEvents]) => (
+                        <div key={`completed-${league}`}>
+                          <h3 className="text-body-xs font-mono uppercase tracking-widest text-txt-tertiary mb-4 font-semibold">
+                            {league}
+                          </h3>
+                          <div className="space-y-3">
+                            {leagueEvents.map((event) => (
+                              <div key={event.id}>
+                                <EventCard event={event} />
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center rounded-oracle-lg border-2 border-dashed border-warm-sand py-20 text-center">

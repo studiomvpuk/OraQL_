@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Star, ChevronDown, ChevronUp, Plus, Sparkles } from 'lucide-react';
+import { Star, ChevronDown, ChevronUp, Plus, Sparkles, AlertTriangle } from 'lucide-react';
 import { cn, formatProbability, formatCategory } from '@/lib/utils';
 import { ProbabilityBadge } from '@/components/ui/ProbabilityBadge';
 import { Button } from '@/components/ui/Button';
@@ -111,13 +111,13 @@ export function PickCard({
         )}
       </button>
 
-      {/* Explanation */}
+      {/* Explanation with caveat highlighting */}
       {expanded && pick.explanation && (
         <div className={cn(
           'mt-3 rounded-oracle-sm p-4 text-body-sm leading-relaxed animate-slide-up',
           isDark ? 'bg-dark-graphite text-txt-inverse-2' : 'bg-warm-cream text-txt-secondary',
         )}>
-          {pick.explanation}
+          <ExplanationText text={pick.explanation} isDark={isDark} />
         </div>
       )}
 
@@ -132,6 +132,38 @@ export function PickCard({
           Add to Builder
         </Button>
       </div>
+    </div>
+  );
+}
+
+/** Renders explanation text with [Caveat] tags highlighted visually */
+function ExplanationText({ text, isDark }: { text: string; isDark?: boolean }) {
+  // Split on [Caveat] markers
+  const parts = text.split(/\[Caveat\]\s*/);
+
+  return (
+    <div className="space-y-2">
+      {parts.map((part, i) => {
+        if (i === 0) {
+          // First part is before any caveat
+          return part ? <p key={i}>{part.trim()}</p> : null;
+        }
+        // Subsequent parts are caveat content
+        return (
+          <div
+            key={i}
+            className={cn(
+              'flex items-start gap-2 rounded-oracle-sm px-3 py-2 text-body-sm',
+              isDark
+                ? 'bg-oracle-gold/10 text-oracle-gold'
+                : 'bg-oracle-gold/10 text-oracle-gold-dark',
+            )}
+          >
+            <AlertTriangle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
+            <span>{part.trim()}</span>
+          </div>
+        );
+      })}
     </div>
   );
 }
