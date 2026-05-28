@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { TopBar } from '@/components/layout/TopBar';
 import { EventCard } from '@/components/events/EventCard';
 import { PickCard } from '@/components/picks/PickCard';
-import { LeagueFilter } from '@/components/events/LeagueFilter';
+import { cn } from '@/lib/utils';
 import { api } from '@/lib/api';
 import type { Event, Pick, Sport, PaginatedResponse, SportSummary } from '@/types';
 
@@ -132,27 +132,29 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* Picks Grid */}
+            {/* Horizontal Scrollable Picks Row */}
             {isLoading ? (
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {[1, 2, 3].map((i) => (
+              <div className="flex gap-4 overflow-hidden">
+                {[1, 2, 3, 4].map((i) => (
                   <div
                     key={i}
-                    className="h-56 animate-pulse rounded-oracle-lg bg-dark-graphite/50"
+                    className="h-56 w-72 flex-shrink-0 animate-pulse rounded-oracle-lg bg-dark-graphite/50"
                   />
                 ))}
               </div>
             ) : topPicks.length > 0 ? (
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {topPicks.map((pick) => (
-                  <Link
-                    key={pick.id}
-                    href={pick.event?.id ? `/events/${pick.event.id}` : '#'}
-                    className="block transition-transform duration-200 hover:-translate-y-1"
-                  >
-                    <PickCard pick={pick} variant="dark" showEvent />
-                  </Link>
-                ))}
+              <div className="-mx-4 px-4 sm:-mx-6 sm:px-6 md:-mx-8 md:px-8 lg:-mx-12 lg:px-12">
+                <div className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-4 scrollbar-hide">
+                  {topPicks.map((pick) => (
+                    <Link
+                      key={pick.id}
+                      href={pick.event?.id ? `/events/${pick.event.id}` : '#'}
+                      className="w-72 flex-shrink-0 snap-start transition-transform duration-200 hover:-translate-y-1 sm:w-80"
+                    >
+                      <PickCard pick={pick} variant="dark" showEvent />
+                    </Link>
+                  ))}
+                </div>
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center py-16 text-center">
@@ -169,22 +171,58 @@ export default function DashboardPage() {
         <section className="relative bg-warm-white px-4 py-8 sm:px-6 sm:py-12 md:px-8 lg:px-12">
           <div className="mx-auto max-w-7xl">
             {/* Section Header */}
-            <div className="mb-6 flex flex-wrap items-center gap-3 sm:mb-8 sm:gap-4">
-              <div className="flex items-center gap-3">
+            <div className="mb-6 sm:mb-8">
+              <div className="mb-4 flex items-center gap-3 sm:gap-4">
                 <TrendingUp className="h-5 w-5 flex-shrink-0 text-oracle-gold sm:h-6 sm:w-6" />
                 <h2 className="font-display text-2xl tracking-tight text-txt-primary sm:text-display-md">
                   Today's Fixtures
                 </h2>
+                <span className="inline-flex items-center rounded-oracle-md bg-warm-cream px-3 py-1.5 font-body text-body-sm font-semibold text-txt-secondary sm:px-4 sm:py-2">
+                  {upcomingEvents.length} upcoming
+                </span>
               </div>
-              <span className="inline-flex items-center rounded-oracle-md bg-warm-cream px-3 py-1.5 font-body text-body-sm font-semibold text-txt-secondary sm:px-4 sm:py-2">
-                {upcomingEvents.length} upcoming
-              </span>
+
+              {/* League Filter Pill Bar */}
               {leagues.length > 1 && (
-                <LeagueFilter
-                  leagues={leagues}
-                  selectedLeagues={selectedLeagues}
-                  onSelectionChange={setSelectedLeagues}
-                />
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => setSelectedLeagues([])}
+                    className={cn(
+                      'rounded-full border px-4 py-2 text-body-sm font-medium transition-all duration-200',
+                      selectedLeagues.length === 0
+                        ? 'border-oracle-gold bg-oracle-gold/10 text-oracle-gold-dark'
+                        : 'border-warm-sand bg-warm-white text-txt-secondary hover:border-warm-stone hover:text-txt-primary',
+                    )}
+                  >
+                    All Leagues
+                  </button>
+                  {leagues.map((league) => {
+                    const isActive = selectedLeagues.includes(league.id);
+                    return (
+                      <button
+                        key={league.id}
+                        onClick={() => {
+                          if (isActive) {
+                            setSelectedLeagues(selectedLeagues.filter((id) => id !== league.id));
+                          } else {
+                            setSelectedLeagues([...selectedLeagues, league.id]);
+                          }
+                        }}
+                        className={cn(
+                          'rounded-full border px-4 py-2 text-body-sm font-medium transition-all duration-200',
+                          isActive
+                            ? 'border-oracle-gold bg-oracle-gold/10 text-oracle-gold-dark'
+                            : 'border-warm-sand bg-warm-white text-txt-secondary hover:border-warm-stone hover:text-txt-primary',
+                        )}
+                      >
+                        {league.name}
+                        <span className="ml-1.5 text-caption opacity-60">
+                          {league.eventCount}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
               )}
             </div>
 

@@ -14,17 +14,26 @@ import {
   AlertTriangle,
   Plus,
   Check,
-  ChevronDown,
-  ChevronUp,
+  ChevronRight,
+  X,
+  Sparkles,
 } from 'lucide-react';
 import Link from 'next/link';
 import { cn, formatKickoff, formatCategory, formatProbability, getProbabilityTier } from '@/lib/utils';
 import { PickCard } from '@/components/picks/PickCard';
-import { ProbabilityBadge } from '@/components/ui/ProbabilityBadge';
-import { Button } from '@/components/ui/Button';
+import { CircularGauge } from '@/components/ui/CircularGauge';
 import { api } from '@/lib/api';
 import { useBuilderStore } from '@/stores/builder.store';
-import type { EventDetail, Market, MarketCategory, BookmakerOdds, Lineup, MatchStat } from '@/types';
+import type {
+  EventDetail,
+  Market,
+  MarketCategory,
+  BookmakerOdds,
+  Lineup,
+  MatchStat,
+  TeamContext,
+  TeamFormEntry,
+} from '@/types';
 
 type TabId = 'markets' | 'odds' | 'lineups' | 'stats';
 
@@ -34,13 +43,25 @@ export default function EventDetailPage() {
   const [event, setEvent] = useState<EventDetail | null>(null);
   const [activeTab, setActiveTab] = useState<TabId>('markets');
   const [activeCategory, setActiveCategory] = useState<MarketCategory | 'ALL'>('ALL');
-  const [expandedMarketId, setExpandedMarketId] = useState<string | null>(null);
+  const [selectedMarket, setSelectedMarket] = useState<Market | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const addToBuilder = useBuilderStore((s) => s.add);
+
+  // Team context (form + injuries) — loaded when market selected
+  const [homeContext, setHomeContext] = useState<TeamContext | null>(null);
+  const [awayContext, setAwayContext] = useState<TeamContext | null>(null);
+  const [contextLoading, setContextLoading] = useState(false);
 
   useEffect(() => {
     if (eventId) loadEvent();
   }, [eventId]);
+
+  // Load team context when event loads
+  useEffect(() => {
+    if (event && !homeContext && !contextLoading) {
+      loadTeamContext();
+    }
+  }, [event]);
 
   async function loadEvent() {
     setIsLoading(true);
@@ -51,6 +72,22 @@ export default function EventDetailPage() {
       // handle error
     }
     setIsLoading(false);
+  }
+
+  async function loadTeamContext() {
+    if (!event) return;
+    setContextLoading(true);
+    try {
+      const [home, away] = await Promise.all([
+        api.get<TeamContext>(`/events/team/${event.homeTeam.id}/context`),
+        api.get<TeamContext>(`/events/team/${event.awayTeam.id}/context`),
+      ]);
+      setHomeContext(home);
+      setAwayContext(away);
+    } catch {
+      // Context is supplementary — fail silently
+    }
+    setContextLoading(false);
   }
 
   if (isLoading) {
@@ -200,32 +237,33 @@ export default function EventDetailPage() {
       {/* ─── Main Content ─── */}
       <div className="px-4 pb-6 sm:px-6">
         <div className="mx-auto grid max-w-7xl grid-cols-1 gap-8 lg:grid-cols-3">
-          {/* ─── Left Column: OraQL_ Picks ─── */}
-          <div className="lg:col-span-1 space-y-6">
-            <div className="flex items-center gap-3">
-              <Star className="h-6 w-6 fill-oracle-gold text-oracle-gold flex-shrink-0" />
-              <h2 className="font-display text-heading tracking-tight text-txt-primary">
-                OraQL_ Picks
-              </h2>
+          {/* ─── Left Column: OraQL_ Picks + Tabbed Content ─── */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* OraQL_ Picks */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <Star className="h-6 w-6 fill-oracle-gold text-oracle-gold flex-shrink-0" />
+                <h2 className="font-display text-heading tracking-tight text-txt-primary">
+                  OraQL_ Picks
+                </h2>
+              </div>
+              {event.picks.length > 0 ? (
+                <div className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2 scrollbar-hide">
+                  {event.picks.map((pick) => (
+                    <div key={pick.id} className="w-72 flex-shrink-0 snap-start sm:w-80">
+                      <PickCard pick={pick} />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-oracle-md border border-dashed border-warm-stone bg-warm-white p-6 text-center">
+                  <p className="text-body-sm text-txt-tertiary">
+                    No strong picks identified for this event.
+                  </p>
+                </div>
+              )}
             </div>
 
-            {event.picks.length > 0 ? (
-              <div className="space-y-4">
-                {event.picks.map((pick) => (
-                  <PickCard key={pick.id} pick={pick} />
-                ))}
-              </div>
-            ) : (
-              <div className="rounded-oracle-md border border-dashed border-warm-stone bg-warm-white p-6 text-center">
-                <p className="text-body-sm text-txt-tertiary">
-                  No strong picks identified for this event.
-                </p>
-              </div>
-            )}
-          </div>
-
-          {/* ─── Right Column: Tabbed Content ─── */}
-          <div className="lg:col-span-2 space-y-6">
             {/* Tab Navigation */}
             <div className="flex gap-1 rounded-oracle-md bg-warm-cream p-1">
               {tabs.map((tab) => {
@@ -266,8 +304,8 @@ export default function EventDetailPage() {
                 activeCategory={activeCategory}
                 setActiveCategory={setActiveCategory}
                 filteredMarkets={filteredMarkets}
-                expandedMarketId={expandedMarketId}
-                setExpandedMarketId={setExpandedMarketId}
+                selectedMarket={selectedMarket}
+                setSelectedMarket={setSelectedMarket}
                 addToBuilder={addToBuilder}
               />
             )}
@@ -379,21 +417,369 @@ export default function EventDetailPage() {
               </div>
             )}
           </div>
+
+          {/* ─── Right Column: Market Detail Panel ─── */}
+          <div className="lg:col-span-1">
+            <div className="sticky top-4 space-y-5">
+              {selectedMarket ? (
+                <MarketDetailPanel
+                  market={selectedMarket}
+                  onClose={() => setSelectedMarket(null)}
+                  onAdd={() => addToBuilder(selectedMarket.id)}
+                  homeTeamName={event.homeTeam.shortName || event.homeTeam.name}
+                  awayTeamName={event.awayTeam.shortName || event.awayTeam.name}
+                  homeContext={homeContext}
+                  awayContext={awayContext}
+                  contextLoading={contextLoading}
+                />
+              ) : (
+                <div className="rounded-oracle-lg border-2 border-dashed border-warm-sand bg-warm-cream/50 p-8 text-center">
+                  <TrendingUp className="mx-auto mb-4 h-10 w-10 text-warm-taupe" />
+                  <h3 className="mb-2 font-display text-heading tracking-tight text-txt-secondary">
+                    Market Detail
+                  </h3>
+                  <p className="text-body-sm text-txt-tertiary">
+                    Select a market from the list to see the probability gauge, recent form, and player availability.
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </div>
   );
 }
 
-/* ─── Markets Tab Component ─── */
+/* ═══════════════════════════════════════════════════════════
+   Market Detail Panel — right column
+   ═══════════════════════════════════════════════════════════ */
+function MarketDetailPanel({
+  market,
+  onClose,
+  onAdd,
+  homeTeamName,
+  awayTeamName,
+  homeContext,
+  awayContext,
+  contextLoading,
+}: {
+  market: Market;
+  onClose: () => void;
+  onAdd: () => Promise<void>;
+  homeTeamName: string;
+  awayTeamName: string;
+  homeContext: TeamContext | null;
+  awayContext: TeamContext | null;
+  contextLoading: boolean;
+}) {
+  const [adding, setAdding] = useState(false);
+  const [added, setAdded] = useState(false);
+
+  const handleAdd = useCallback(async () => {
+    if (adding || added) return;
+    setAdding(true);
+    try {
+      await onAdd();
+      setAdding(false);
+      setAdded(true);
+      setTimeout(() => setAdded(false), 1500);
+    } catch {
+      setAdding(false);
+    }
+  }, [onAdd, adding, added]);
+
+  // Reset added state when market changes
+  useEffect(() => {
+    setAdded(false);
+    setAdding(false);
+  }, [market.id]);
+
+  const allInjuries = [
+    ...(homeContext?.injuries || []).map((inj) => ({ ...inj, team: homeTeamName })),
+    ...(awayContext?.injuries || []).map((inj) => ({ ...inj, team: awayTeamName })),
+  ];
+
+  return (
+    <div className="space-y-5 animate-fade-in">
+      {/* Panel Header */}
+      <div className="flex items-start justify-between">
+        <div className="min-w-0 flex-1">
+          <p className="text-caption font-semibold uppercase tracking-widest text-txt-tertiary">
+            {formatCategory(market.category)}
+          </p>
+          <h3 className="mt-1 font-display text-heading tracking-tight text-txt-primary">
+            {market.shortName || market.name}
+            {market.line != null && (
+              <span className="ml-2 font-mono text-body font-semibold text-txt-secondary">
+                {market.line}
+              </span>
+            )}
+          </h3>
+        </div>
+        <button
+          onClick={onClose}
+          className="rounded-md p-1.5 text-txt-tertiary transition-colors hover:bg-warm-cream hover:text-txt-primary"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+
+      {/* Circular Probability Gauge */}
+      <div className="flex justify-center rounded-oracle-md bg-warm-cream/50 py-6">
+        <CircularGauge
+          probability={market.probability}
+          confidence={market.confidence}
+          isValueBet={market.isValueBet}
+          size={160}
+        />
+      </div>
+
+      {/* Value Bet Highlight */}
+      {market.isValueBet && market.valueGap != null && (
+        <div className="flex items-center gap-3 rounded-oracle-md bg-value/10 px-4 py-3">
+          <Sparkles className="h-5 w-5 flex-shrink-0 text-value" />
+          <div>
+            <p className="text-body-sm font-semibold text-value">Value Bet Detected</p>
+            <p className="text-caption text-txt-secondary">
+              Oracle probability is {formatProbability(market.valueGap)} higher than bookmaker implied odds
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Explanation */}
+      {market.explanation && (
+        <div className="space-y-2">
+          <h4 className="text-caption font-semibold uppercase tracking-widest text-txt-tertiary">
+            Analysis
+          </h4>
+          <div className="rounded-oracle-md bg-warm-cream/50 p-4">
+            {market.explanation.split(/\[Caveat\]\s*/).map((part, i) =>
+              i === 0 ? (
+                part ? (
+                  <p key={i} className="text-body-sm text-txt-secondary leading-relaxed">
+                    {part.trim()}
+                  </p>
+                ) : null
+              ) : (
+                <div
+                  key={i}
+                  className="mt-2 flex items-start gap-2 rounded-oracle-sm bg-oracle-gold/10 px-3 py-2 text-body-sm text-oracle-gold-dark"
+                >
+                  <AlertTriangle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
+                  <span>{part.trim()}</span>
+                </div>
+              ),
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Last 5 Matches Mini Table */}
+      <div className="space-y-3">
+        <h4 className="text-caption font-semibold uppercase tracking-widest text-txt-tertiary">
+          Recent Form
+        </h4>
+        {contextLoading ? (
+          <div className="space-y-2">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-8 animate-pulse rounded bg-warm-cream" />
+            ))}
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {/* Home team form */}
+            <FormTable teamName={homeTeamName} form={homeContext?.form || []} />
+            {/* Away team form */}
+            <FormTable teamName={awayTeamName} form={awayContext?.form || []} />
+          </div>
+        )}
+      </div>
+
+      {/* Player Availability */}
+      <div className="space-y-3">
+        <h4 className="text-caption font-semibold uppercase tracking-widest text-txt-tertiary">
+          Player Availability
+        </h4>
+        {contextLoading ? (
+          <div className="space-y-2">
+            {[1, 2].map((i) => (
+              <div key={i} className="h-10 animate-pulse rounded bg-warm-cream" />
+            ))}
+          </div>
+        ) : allInjuries.length > 0 ? (
+          <div className="space-y-2">
+            {allInjuries.slice(0, 8).map((inj) => (
+              <div
+                key={inj.id}
+                className="flex items-center gap-3 rounded-oracle-sm bg-warm-cream/60 px-3 py-2"
+              >
+                {inj.player.photoUrl ? (
+                  <img
+                    src={inj.player.photoUrl}
+                    alt=""
+                    className="h-7 w-7 rounded-full object-cover"
+                  />
+                ) : (
+                  <div className="flex h-7 w-7 items-center justify-center rounded-full bg-warm-stone text-[10px] font-bold text-txt-inverse">
+                    {inj.player.name?.charAt(0) || '?'}
+                  </div>
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-body-sm font-medium text-txt-primary">
+                    {inj.player.name}
+                  </p>
+                  <p className="text-caption text-txt-tertiary">
+                    {inj.team} · {inj.player.position || 'Player'}
+                  </p>
+                </div>
+                <span
+                  className={cn(
+                    'flex-shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase',
+                    inj.severity === 'SEVERE'
+                      ? 'bg-danger/15 text-danger'
+                      : inj.severity === 'MODERATE'
+                        ? 'bg-prob-mid/15 text-prob-mid'
+                        : 'bg-warm-sand text-txt-secondary',
+                  )}
+                >
+                  {inj.severity || 'OUT'}
+                </span>
+              </div>
+            ))}
+            {allInjuries.length > 8 && (
+              <p className="text-caption text-txt-tertiary text-center">
+                +{allInjuries.length - 8} more
+              </p>
+            )}
+          </div>
+        ) : (
+          <div className="rounded-oracle-sm bg-warm-cream/50 px-4 py-3 text-center">
+            <p className="text-body-sm text-txt-tertiary">
+              No reported injuries or suspensions
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Add to Builder Button */}
+      <button
+        onClick={handleAdd}
+        disabled={adding || added}
+        className={cn(
+          'flex w-full items-center justify-center gap-2 rounded-oracle-md px-4 py-4 text-body font-semibold transition-all duration-200',
+          added
+            ? 'bg-prob-high/20 text-prob-high'
+            : adding
+              ? 'bg-dark-charcoal text-txt-inverse-2'
+              : 'bg-dark-ink text-txt-inverse hover:bg-dark-charcoal active:bg-dark-graphite',
+        )}
+      >
+        {added ? (
+          <>
+            <Check className="h-5 w-5" />
+            Added to Builder!
+          </>
+        ) : adding ? (
+          <>
+            <div className="h-4 w-4 animate-spin rounded-full border-2 border-txt-inverse-2 border-t-transparent" />
+            Adding...
+          </>
+        ) : (
+          <>
+            <Plus className="h-5 w-5" />
+            Add to Bet Builder
+          </>
+        )}
+      </button>
+    </div>
+  );
+}
+
+/* ─── Form Table (Last 5 Matches) ─── */
+function FormTable({ teamName, form }: { teamName: string; form: TeamFormEntry[] }) {
+  if (form.length === 0) {
+    return (
+      <div className="rounded-oracle-sm bg-warm-cream/50 px-3 py-2 text-center">
+        <p className="text-caption text-txt-tertiary">{teamName}: No recent data</p>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <p className="mb-2 text-body-sm font-semibold text-txt-primary">{teamName}</p>
+      <div className="overflow-hidden rounded-oracle-sm border border-warm-sand">
+        <table className="w-full text-caption">
+          <thead>
+            <tr className="bg-warm-cream text-txt-tertiary">
+              <th className="px-2 py-1.5 text-left font-semibold">Opponent</th>
+              <th className="px-2 py-1.5 text-center font-semibold">H/A</th>
+              <th className="px-2 py-1.5 text-center font-semibold">Score</th>
+              <th className="px-2 py-1.5 text-center font-semibold">Result</th>
+            </tr>
+          </thead>
+          <tbody>
+            {form.map((m) => (
+              <tr key={m.id} className="border-t border-warm-cream">
+                <td className="px-2 py-1.5 text-txt-primary">{m.opponent.name}</td>
+                <td className="px-2 py-1.5 text-center text-txt-secondary">{m.venue}</td>
+                <td className="px-2 py-1.5 text-center font-mono font-semibold text-txt-primary">
+                  {m.score}
+                </td>
+                <td className="px-2 py-1.5 text-center">
+                  <span
+                    className={cn(
+                      'inline-flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold',
+                      m.result === 'W'
+                        ? 'bg-prob-high/15 text-prob-high'
+                        : m.result === 'L'
+                          ? 'bg-danger/15 text-danger'
+                          : 'bg-warm-sand text-txt-secondary',
+                    )}
+                  >
+                    {m.result}
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {/* Form streak badges */}
+      <div className="mt-2 flex gap-1">
+        {form.map((m) => (
+          <span
+            key={m.id}
+            className={cn(
+              'flex h-6 w-6 items-center justify-center rounded text-[10px] font-bold',
+              m.result === 'W'
+                ? 'bg-prob-high/15 text-prob-high'
+                : m.result === 'L'
+                  ? 'bg-danger/15 text-danger'
+                  : 'bg-warm-sand text-txt-secondary',
+            )}
+          >
+            {m.result}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Markets Tab Component
+   ═══════════════════════════════════════════════════════════ */
 function MarketsTab({
   markets,
   categories,
   activeCategory,
   setActiveCategory,
   filteredMarkets,
-  expandedMarketId,
-  setExpandedMarketId,
+  selectedMarket,
+  setSelectedMarket,
   addToBuilder,
 }: {
   markets: Market[];
@@ -401,14 +787,12 @@ function MarketsTab({
   activeCategory: string;
   setActiveCategory: (cat: MarketCategory | 'ALL') => void;
   filteredMarkets: Market[];
-  expandedMarketId: string | null;
-  setExpandedMarketId: (id: string | null) => void;
+  selectedMarket: Market | null;
+  setSelectedMarket: (m: Market | null) => void;
   addToBuilder: (id: string) => Promise<void>;
 }) {
   /**
    * Group markets by category + line into paired Over/Under rows.
-   * E.g. GOALS line 2.5 → { over: Market, under: Market }
-   * Non-Over/Under markets (MATCH_RESULT, BTTS) appear as standalone.
    */
   const groupedSections = (() => {
     type MarketGroup = {
@@ -506,16 +890,14 @@ function MarketsTab({
             <div className="space-y-2">
               {groups.map((group, gi) => {
                 if (group.standalone) {
-                  // Standalone market (BTTS, MATCH_RESULT)
                   const m = group.standalone;
-                  const isExpanded = expandedMarketId === m.id;
+                  const isSelected = selectedMarket?.id === m.id;
                   return (
-                    <MarketCard
+                    <MarketRow
                       key={m.id}
                       market={m}
-                      isExpanded={isExpanded}
-                      onToggle={() => setExpandedMarketId(isExpanded ? null : m.id)}
-                      onAdd={() => addToBuilder(m.id)}
+                      isSelected={isSelected}
+                      onClick={() => setSelectedMarket(isSelected ? null : m)}
                     />
                   );
                 }
@@ -523,34 +905,31 @@ function MarketsTab({
                 // Over/Under pair — side by side
                 return (
                   <div key={`pair-${gi}`} className="space-y-2">
-                    {/* Line label */}
                     <p className="text-caption font-medium text-txt-secondary pl-1">
                       Line {group.line}
                     </p>
                     <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                       {group.over && (
-                        <MarketCard
+                        <MarketRow
                           market={group.over}
-                          isExpanded={expandedMarketId === group.over.id}
-                          onToggle={() =>
-                            setExpandedMarketId(
-                              expandedMarketId === group.over!.id ? null : group.over!.id,
+                          isSelected={selectedMarket?.id === group.over.id}
+                          onClick={() =>
+                            setSelectedMarket(
+                              selectedMarket?.id === group.over!.id ? null : group.over!,
                             )
                           }
-                          onAdd={() => addToBuilder(group.over!.id)}
                           direction="OVER"
                         />
                       )}
                       {group.under && (
-                        <MarketCard
+                        <MarketRow
                           market={group.under}
-                          isExpanded={expandedMarketId === group.under.id}
-                          onToggle={() =>
-                            setExpandedMarketId(
-                              expandedMarketId === group.under!.id ? null : group.under!.id,
+                          isSelected={selectedMarket?.id === group.under.id}
+                          onClick={() =>
+                            setSelectedMarket(
+                              selectedMarket?.id === group.under!.id ? null : group.under!,
                             )
                           }
-                          onAdd={() => addToBuilder(group.under!.id)}
                           direction="UNDER"
                         />
                       )}
@@ -566,167 +945,75 @@ function MarketsTab({
   );
 }
 
-/* ─── Individual Market Card with inline expand ─── */
-function MarketCard({
+/* ─── Market Row — clickable, selects into detail panel ─── */
+function MarketRow({
   market,
-  isExpanded,
-  onToggle,
-  onAdd,
+  isSelected,
+  onClick,
   direction,
 }: {
   market: Market;
-  isExpanded: boolean;
-  onToggle: () => void;
-  onAdd: () => void;
+  isSelected: boolean;
+  onClick: () => void;
   direction?: 'OVER' | 'UNDER';
 }) {
   const tier = getProbabilityTier(market.probability);
-  const [adding, setAdding] = useState(false);
-  const [added, setAdded] = useState(false);
-
-  const handleAdd = useCallback(async () => {
-    if (adding || added) return;
-    setAdding(true);
-    try {
-      await onAdd();
-      setAdding(false);
-      setAdded(true);
-      setTimeout(() => {
-        setAdded(false);
-        onToggle(); // close after brief success flash
-      }, 900);
-    } catch {
-      setAdding(false);
-    }
-  }, [onAdd, onToggle, adding, added]);
 
   return (
-    <>
-      {/* Invisible full-screen backdrop — closes dropdown on tap anywhere outside */}
-      {isExpanded && (
-        <div className="fixed inset-0 z-20" onClick={onToggle} />
+    <button
+      onClick={onClick}
+      className={cn(
+        'flex w-full items-center gap-3 rounded-oracle-md border px-4 py-3 text-left transition-all duration-200',
+        isSelected
+          ? 'border-oracle-gold bg-oracle-gold/[0.06] shadow-soft'
+          : 'border-warm-sand bg-white hover:border-warm-stone hover:shadow-soft',
       )}
-
-      <div className="relative z-20">
-        <div
+    >
+      {/* Direction badge */}
+      {direction && (
+        <span
           className={cn(
-            'rounded-oracle-md border transition-all duration-200',
-            isExpanded
-              ? 'border-oracle-gold bg-oracle-gold/[0.04] shadow-soft'
-              : 'border-warm-sand bg-white hover:border-warm-stone',
+            'flex-shrink-0 rounded px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide',
+            direction === 'OVER'
+              ? 'bg-prob-high/15 text-prob-high'
+              : 'bg-blue-100 text-blue-600',
           )}
         >
-          {/* Clickable header */}
-          <button
-            onClick={onToggle}
-            className="flex w-full items-center gap-3 px-4 py-3 text-left"
-          >
-            {/* Direction badge */}
-            {direction && (
-              <span
-                className={cn(
-                  'flex-shrink-0 rounded px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide',
-                  direction === 'OVER'
-                    ? 'bg-prob-high/15 text-prob-high'
-                    : 'bg-blue-100 text-blue-600',
-                )}
-              >
-                {direction}
-              </span>
-            )}
+          {direction}
+        </span>
+      )}
 
-            {/* Name */}
-            <span className="flex-1 truncate text-body-sm font-medium text-txt-primary">
-              {market.shortName || market.name}
-            </span>
+      {/* Name */}
+      <span className="flex-1 truncate text-body-sm font-medium text-txt-primary">
+        {market.shortName || market.name}
+      </span>
 
-            {/* Value badge */}
-            {market.isValueBet && (
-              <span className="rounded-full bg-value/15 px-2 py-0.5 text-[10px] font-bold text-value">
-                VALUE
-              </span>
-            )}
+      {/* Value badge */}
+      {market.isValueBet && (
+        <span className="rounded-full bg-value/15 px-2 py-0.5 text-[10px] font-bold text-value">
+          VALUE
+        </span>
+      )}
 
-            {/* Probability */}
-            <span
-              className={cn('font-mono text-body-sm font-semibold', {
-                'text-prob-high': tier === 'high',
-                'text-prob-mid': tier === 'mid',
-                'text-txt-tertiary': tier === 'low',
-              })}
-            >
-              {formatProbability(market.probability)}
-            </span>
+      {/* Probability */}
+      <span
+        className={cn('font-mono text-body-sm font-semibold', {
+          'text-prob-high': tier === 'high',
+          'text-prob-mid': tier === 'mid',
+          'text-txt-tertiary': tier === 'low',
+        })}
+      >
+        {formatProbability(market.probability)}
+      </span>
 
-            {/* Expand chevron */}
-            {isExpanded ? (
-              <ChevronUp className="h-4 w-4 flex-shrink-0 text-txt-tertiary" />
-            ) : (
-              <ChevronDown className="h-4 w-4 flex-shrink-0 text-txt-tertiary" />
-            )}
-          </button>
-        </div>
-
-        {/* Expanded detail — overlay dropdown */}
-        {isExpanded && (
-          <div className="absolute left-0 right-0 top-full z-30 mt-1 rounded-oracle-md border border-oracle-gold bg-white shadow-lg overflow-hidden">
-            {/* Explanation area */}
-            {market.explanation && (
-              <div className="space-y-2 p-4 pb-3">
-                {market.explanation.split(/\[Caveat\]\s*/).map((part, i) =>
-                  i === 0 ? (
-                    part ? (
-                      <p key={i} className="text-body-sm text-txt-secondary leading-relaxed">
-                        {part.trim()}
-                      </p>
-                    ) : null
-                  ) : (
-                    <div
-                      key={i}
-                      className="flex items-start gap-2 rounded-oracle-sm bg-oracle-gold/10 px-3 py-2 text-body-sm text-oracle-gold-dark"
-                    >
-                      <AlertTriangle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
-                      <span>{part.trim()}</span>
-                    </div>
-                  ),
-                )}
-              </div>
-            )}
-
-            {/* Full-width Add to Builder button — large tap target */}
-            <button
-              onClick={handleAdd}
-              disabled={adding || added}
-              className={cn(
-                'flex w-full items-center justify-center gap-2 px-4 py-4 text-body font-semibold transition-all duration-200',
-                added
-                  ? 'bg-prob-high/20 text-prob-high'
-                  : adding
-                    ? 'bg-dark-charcoal text-txt-inverse-2'
-                    : 'bg-dark-ink text-txt-inverse active:bg-dark-charcoal',
-              )}
-            >
-              {added ? (
-                <>
-                  <Check className="h-5 w-5" />
-                  Added to Builder!
-                </>
-              ) : adding ? (
-                <>
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-txt-inverse-2 border-t-transparent" />
-                  Adding...
-                </>
-              ) : (
-                <>
-                  <Plus className="h-5 w-5" />
-                  Add to Bet Builder
-                </>
-              )}
-            </button>
-          </div>
+      {/* Arrow indicator */}
+      <ChevronRight
+        className={cn(
+          'h-4 w-4 flex-shrink-0 transition-colors',
+          isSelected ? 'text-oracle-gold' : 'text-txt-tertiary',
         )}
-      </div>
-    </>
+      />
+    </button>
   );
 }
 
@@ -847,7 +1134,6 @@ function StatsPanel({
 
   return (
     <div className="rounded-oracle-md bg-warm-white p-5">
-      {/* Team headers */}
       <div className="mb-5 flex items-center justify-between">
         <span className="font-display text-body-sm font-semibold text-txt-primary">{homeTeam}</span>
         <span className="text-caption text-txt-tertiary">vs</span>

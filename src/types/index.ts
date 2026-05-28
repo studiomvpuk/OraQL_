@@ -167,6 +167,37 @@ export interface BuilderState {
   combinedProbability: number;
 }
 
+export interface TeamFormEntry {
+  id: string;
+  opponent: { name: string; id: string };
+  venue: 'H' | 'A';
+  score: string;
+  result: 'W' | 'D' | 'L';
+  kickoffAt: string;
+  league: string;
+}
+
+export interface TeamInjury {
+  id: string;
+  type: string;
+  severity?: string;
+  description?: string;
+  startDate: string;
+  expectedReturn?: string;
+  player: {
+    id: string;
+    name: string;
+    position?: string;
+    number?: number;
+    photoUrl?: string;
+  };
+}
+
+export interface TeamContext {
+  form: TeamFormEntry[];
+  injuries: TeamInjury[];
+}
+
 export interface SportSummary {
   sport: Sport;
   eventCount: number;
