@@ -92,9 +92,11 @@ export function EventCard({ event, className }: EventCardProps) {
               <Star className="h-3.5 w-3.5 fill-oracle-gold" />
               <span className="hidden text-caption font-semibold sm:inline">Top Pick</span>
             </div>
-            <span className="hidden max-w-[10rem] truncate text-body-sm text-txt-secondary sm:inline">
-              {topPick.market.shortName || topPick.market.name}
-            </span>
+            {topPick.market && (
+              <span className="hidden max-w-[10rem] truncate text-body-sm text-txt-secondary sm:inline">
+                {topPick.market.shortName || topPick.market.name}
+              </span>
+            )}
             <ProbabilityBadge probability={topPick.probability} size="sm" />
           </div>
         )}
