@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import {
   ArrowLeft,
@@ -581,156 +581,152 @@ function MarketCard({
   direction?: 'OVER' | 'UNDER';
 }) {
   const tier = getProbabilityTier(market.probability);
-  const cardRef = useRef<HTMLDivElement>(null);
+  const [adding, setAdding] = useState(false);
   const [added, setAdded] = useState(false);
 
-  // Close dropdown when clicking anywhere outside
-  useEffect(() => {
-    if (!isExpanded) return;
-    function handleClickOutside(e: MouseEvent) {
-      if (cardRef.current && !cardRef.current.contains(e.target as Node)) {
-        onToggle(); // close
-      }
-    }
-    // Use a short delay so the same click that opened it doesn't immediately close it
-    const timer = setTimeout(() => {
-      document.addEventListener('mousedown', handleClickOutside);
-    }, 10);
-    return () => {
-      clearTimeout(timer);
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isExpanded, onToggle]);
-
-  const handleAdd = async () => {
+  const handleAdd = useCallback(async () => {
+    if (adding || added) return;
+    setAdding(true);
     try {
       await onAdd();
+      setAdding(false);
       setAdded(true);
       setTimeout(() => {
         setAdded(false);
-        onToggle(); // close after adding
-      }, 1200);
+        onToggle(); // close after brief success flash
+      }, 900);
     } catch {
-      // Error is handled by the store
+      setAdding(false);
     }
-  };
+  }, [onAdd, onToggle, adding, added]);
 
   return (
-    <div className="relative" ref={cardRef}>
-      <div
-        className={cn(
-          'rounded-oracle-md border transition-all duration-200',
-          isExpanded
-            ? 'border-oracle-gold bg-oracle-gold/[0.04] shadow-soft'
-            : 'border-warm-sand bg-white hover:border-warm-stone',
-        )}
-      >
-        {/* Clickable header */}
-        <button
-          onClick={onToggle}
-          className="flex w-full items-center gap-3 px-4 py-3 text-left"
-        >
-          {/* Direction badge */}
-          {direction && (
-            <span
-              className={cn(
-                'flex-shrink-0 rounded px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide',
-                direction === 'OVER'
-                  ? 'bg-prob-high/15 text-prob-high'
-                  : 'bg-blue-100 text-blue-600',
-              )}
-            >
-              {direction}
-            </span>
-          )}
-
-          {/* Name */}
-          <span className="flex-1 truncate text-body-sm font-medium text-txt-primary">
-            {market.shortName || market.name}
-          </span>
-
-          {/* Value badge */}
-          {market.isValueBet && (
-            <span className="rounded-full bg-value/15 px-2 py-0.5 text-[10px] font-bold text-value">
-              VALUE
-            </span>
-          )}
-
-          {/* Probability */}
-          <span
-            className={cn('font-mono text-body-sm font-semibold', {
-              'text-prob-high': tier === 'high',
-              'text-prob-mid': tier === 'mid',
-              'text-txt-tertiary': tier === 'low',
-            })}
-          >
-            {formatProbability(market.probability)}
-          </span>
-
-          {/* Expand chevron */}
-          {isExpanded ? (
-            <ChevronUp className="h-4 w-4 flex-shrink-0 text-txt-tertiary" />
-          ) : (
-            <ChevronDown className="h-4 w-4 flex-shrink-0 text-txt-tertiary" />
-          )}
-        </button>
-      </div>
-
-      {/* Expanded detail — overlay dropdown */}
+    <>
+      {/* Invisible full-screen backdrop — closes dropdown on tap anywhere outside */}
       {isExpanded && (
-        <div className="absolute left-0 right-0 top-full z-30 mt-1 rounded-oracle-md border border-oracle-gold bg-white p-4 shadow-lg space-y-3">
-          {/* Explanation */}
-          {market.explanation && (
-            <div className="space-y-2">
-              {market.explanation.split(/\[Caveat\]\s*/).map((part, i) =>
-                i === 0 ? (
-                  part ? (
-                    <p key={i} className="text-body-sm text-txt-secondary leading-relaxed">
-                      {part.trim()}
-                    </p>
-                  ) : null
-                ) : (
-                  <div
-                    key={i}
-                    className="flex items-start gap-2 rounded-oracle-sm bg-oracle-gold/10 px-3 py-2 text-body-sm text-oracle-gold-dark"
-                  >
-                    <AlertTriangle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
-                    <span>{part.trim()}</span>
-                  </div>
-                ),
-              )}
-            </div>
-          )}
+        <div className="fixed inset-0 z-20" onClick={onToggle} />
+      )}
 
-          {/* Add to Builder button */}
+      <div className="relative z-20">
+        <div
+          className={cn(
+            'rounded-oracle-md border transition-all duration-200',
+            isExpanded
+              ? 'border-oracle-gold bg-oracle-gold/[0.04] shadow-soft'
+              : 'border-warm-sand bg-white hover:border-warm-stone',
+          )}
+        >
+          {/* Clickable header */}
           <button
-            onClick={(e) => {
-              e.stopPropagation();
-              handleAdd();
-            }}
-            disabled={added}
-            className={cn(
-              'flex w-full items-center justify-center gap-2 rounded-oracle-sm px-4 py-2.5 text-body-sm font-semibold transition-colors',
-              added
-                ? 'bg-prob-high/20 text-prob-high'
-                : 'bg-dark-ink text-txt-inverse hover:bg-dark-charcoal',
-            )}
+            onClick={onToggle}
+            className="flex w-full items-center gap-3 px-4 py-3 text-left"
           >
-            {added ? (
-              <>
-                <Check className="h-4 w-4" />
-                Added!
-              </>
+            {/* Direction badge */}
+            {direction && (
+              <span
+                className={cn(
+                  'flex-shrink-0 rounded px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide',
+                  direction === 'OVER'
+                    ? 'bg-prob-high/15 text-prob-high'
+                    : 'bg-blue-100 text-blue-600',
+                )}
+              >
+                {direction}
+              </span>
+            )}
+
+            {/* Name */}
+            <span className="flex-1 truncate text-body-sm font-medium text-txt-primary">
+              {market.shortName || market.name}
+            </span>
+
+            {/* Value badge */}
+            {market.isValueBet && (
+              <span className="rounded-full bg-value/15 px-2 py-0.5 text-[10px] font-bold text-value">
+                VALUE
+              </span>
+            )}
+
+            {/* Probability */}
+            <span
+              className={cn('font-mono text-body-sm font-semibold', {
+                'text-prob-high': tier === 'high',
+                'text-prob-mid': tier === 'mid',
+                'text-txt-tertiary': tier === 'low',
+              })}
+            >
+              {formatProbability(market.probability)}
+            </span>
+
+            {/* Expand chevron */}
+            {isExpanded ? (
+              <ChevronUp className="h-4 w-4 flex-shrink-0 text-txt-tertiary" />
             ) : (
-              <>
-                <Plus className="h-4 w-4" />
-                Add to Bet Builder
-              </>
+              <ChevronDown className="h-4 w-4 flex-shrink-0 text-txt-tertiary" />
             )}
           </button>
         </div>
-      )}
-    </div>
+
+        {/* Expanded detail — overlay dropdown */}
+        {isExpanded && (
+          <div className="absolute left-0 right-0 top-full z-30 mt-1 rounded-oracle-md border border-oracle-gold bg-white shadow-lg overflow-hidden">
+            {/* Explanation area */}
+            {market.explanation && (
+              <div className="space-y-2 p-4 pb-3">
+                {market.explanation.split(/\[Caveat\]\s*/).map((part, i) =>
+                  i === 0 ? (
+                    part ? (
+                      <p key={i} className="text-body-sm text-txt-secondary leading-relaxed">
+                        {part.trim()}
+                      </p>
+                    ) : null
+                  ) : (
+                    <div
+                      key={i}
+                      className="flex items-start gap-2 rounded-oracle-sm bg-oracle-gold/10 px-3 py-2 text-body-sm text-oracle-gold-dark"
+                    >
+                      <AlertTriangle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
+                      <span>{part.trim()}</span>
+                    </div>
+                  ),
+                )}
+              </div>
+            )}
+
+            {/* Full-width Add to Builder button — large tap target */}
+            <button
+              onClick={handleAdd}
+              disabled={adding || added}
+              className={cn(
+                'flex w-full items-center justify-center gap-2 px-4 py-4 text-body font-semibold transition-all duration-200',
+                added
+                  ? 'bg-prob-high/20 text-prob-high'
+                  : adding
+                    ? 'bg-dark-charcoal text-txt-inverse-2'
+                    : 'bg-dark-ink text-txt-inverse active:bg-dark-charcoal',
+              )}
+            >
+              {added ? (
+                <>
+                  <Check className="h-5 w-5" />
+                  Added to Builder!
+                </>
+              ) : adding ? (
+                <>
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-txt-inverse-2 border-t-transparent" />
+                  Adding...
+                </>
+              ) : (
+                <>
+                  <Plus className="h-5 w-5" />
+                  Add to Bet Builder
+                </>
+              )}
+            </button>
+          </div>
+        )}
+      </div>
+    </>
   );
 }
 
