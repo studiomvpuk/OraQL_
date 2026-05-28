@@ -238,7 +238,7 @@ export default function EventDetailPage() {
       <div className="px-4 pb-6 sm:px-6">
         <div className="mx-auto grid max-w-7xl grid-cols-1 gap-8 lg:grid-cols-3">
           {/* ─── Left Column: OraQL_ Picks + Tabbed Content ─── */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className="col-span-1 lg:col-span-2 space-y-6">
             {/* OraQL_ Picks */}
             <div className="space-y-4">
               <div className="flex items-center gap-3">
@@ -418,8 +418,8 @@ export default function EventDetailPage() {
             )}
           </div>
 
-          {/* ─── Right Column: Market Detail Panel ─── */}
-          <div className="lg:col-span-1">
+          {/* ─── Right Column: Market Detail Panel (Desktop only) ─── */}
+          <div className="hidden lg:block lg:col-span-1">
             <div className="sticky top-4 space-y-5">
               {selectedMarket ? (
                 <MarketDetailPanel
@@ -447,6 +447,36 @@ export default function EventDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* ─── Mobile Bottom Sheet (< lg only) ─── */}
+      {selectedMarket && (
+        <div className="lg:hidden">
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 z-40 bg-black/50 animate-fade-in"
+            onClick={() => setSelectedMarket(null)}
+          />
+          {/* Sheet */}
+          <div className="fixed inset-x-0 bottom-0 z-50 max-h-[85vh] overflow-y-auto rounded-t-oracle-xl bg-warm-white shadow-xl animate-slide-up">
+            {/* Drag handle */}
+            <div className="sticky top-0 z-10 flex justify-center bg-warm-white pb-2 pt-3">
+              <div className="h-1 w-10 rounded-full bg-warm-stone" />
+            </div>
+            <div className="px-5 pb-8">
+              <MarketDetailPanel
+                market={selectedMarket}
+                onClose={() => setSelectedMarket(null)}
+                onAdd={() => addToBuilder(selectedMarket.id)}
+                homeTeamName={event.homeTeam.shortName || event.homeTeam.name}
+                awayTeamName={event.awayTeam.shortName || event.awayTeam.name}
+                homeContext={homeContext}
+                awayContext={awayContext}
+                contextLoading={contextLoading}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
