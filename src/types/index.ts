@@ -39,6 +39,7 @@ export interface Team {
   name: string;
   shortName?: string;
   logoUrl?: string;
+  league?: League;
 }
 
 export interface League {
@@ -257,8 +258,13 @@ export interface StreakMatch {
 }
 
 export interface ScoredStreak extends Streak {
+  /** Flat fields returned by scoreAndRankStreaks API */
+  teamName: string;
+  teamLogoUrl: string | null;
+  leagueName: string | null;
   qualityScore: number;
   recencyScore: number;
+  summary: string;
 }
 
 export interface StreakSuggestion {

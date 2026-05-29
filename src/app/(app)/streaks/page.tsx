@@ -341,54 +341,156 @@ function TicketCard({
 
 /* ─── Streak Row ─── */
 function StreakRow({ streak, rank }: { streak: ScoredStreak; rank: number }) {
+  const [isExpanded, setIsExpanded] = useState(false);
   const hitRateTier = getProbabilityTier(streak.hitRate);
+  const confTier = getProbabilityTier(streak.confidence);
+  const teamName = streak.teamName || streak.team?.name || 'Unknown Team';
+  const teamLogo = streak.teamLogoUrl || streak.team?.logoUrl;
+  const leagueName = streak.leagueName || streak.team?.league?.name;
+
+  const hitCount = Math.round(streak.hitRate * streak.windowSize);
 
   return (
-    <div className="group flex items-center gap-3 rounded-oracle-md border border-warm-sand bg-white px-4 py-3 transition-all duration-200 hover:border-warm-stone hover:shadow-soft sm:gap-4">
-      {/* Rank */}
-      <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-warm-cream font-mono text-caption font-bold text-txt-secondary">
-        {rank}
-      </span>
+    <div className="overflow-hidden rounded-oracle-md border border-warm-sand bg-white transition-all duration-200 hover:border-warm-stone hover:shadow-soft">
+      {/* Main row — clickable */}
+      <button
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="group flex w-full items-center gap-3 px-4 py-3 text-left sm:gap-4"
+      >
+        {/* Rank */}
+        <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-warm-cream font-mono text-caption font-bold text-txt-secondary">
+          {rank}
+        </span>
 
-      {/* Team logo + info */}
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
-          {streak.team?.logoUrl && (
-            <img src={streak.team.logoUrl} alt="" className="h-5 w-5 object-contain" />
-          )}
-          <p className="truncate font-display text-body font-semibold tracking-tight text-txt-primary">
-            {streak.team?.name || 'Unknown Team'}
+        {/* Team logo + info */}
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            {teamLogo && (
+              <img src={teamLogo} alt="" className="h-5 w-5 object-contain" />
+            )}
+            <p className="truncate font-display text-body font-semibold tracking-tight text-txt-primary">
+              {teamName}
+            </p>
+            {leagueName && (
+              <span className="hidden text-caption text-txt-tertiary sm:inline">
+                {leagueName}
+              </span>
+            )}
+          </div>
+          <p className="mt-0.5 text-caption text-txt-tertiary">
+            {formatMarketName(streak.marketName)}
+            {streak.line != null && ` ${streak.line}`}
+            <span className="mx-1.5 text-warm-stone">·</span>
+            {streak.venueFilter === 'ALL' ? 'All venues' : streak.venueFilter === 'HOME' ? 'Home' : 'Away'}
+            <span className="mx-1.5 text-warm-stone">·</span>
+            Last {streak.windowSize} matches
           </p>
         </div>
-        <p className="mt-0.5 text-caption text-txt-tertiary">
-          {formatMarketName(streak.marketName)}
-          {streak.line != null && ` ${streak.line}`}
-          <span className="mx-1.5 text-warm-stone">·</span>
-          {streak.venueFilter === 'ALL' ? 'All venues' : streak.venueFilter === 'HOME' ? 'Home' : 'Away'}
-          <span className="mx-1.5 text-warm-stone">·</span>
-          Last {streak.windowSize} matches
-        </p>
-      </div>
 
-      {/* Streak length badge */}
-      <div className="flex flex-shrink-0 items-center gap-1 rounded-full bg-oracle-gold/15 px-2.5 py-1">
-        <Flame className="h-3 w-3 text-oracle-gold" />
-        <span className="font-mono text-caption font-bold text-oracle-gold-dark">
-          {streak.streakLength}
+        {/* Streak length badge */}
+        <div className="flex flex-shrink-0 items-center gap-1 rounded-full bg-oracle-gold/15 px-2.5 py-1">
+          <Flame className="h-3 w-3 text-oracle-gold" />
+          <span className="font-mono text-caption font-bold text-oracle-gold-dark">
+            {streak.streakLength}
+          </span>
+        </div>
+
+        {/* Hit rate */}
+        <span className={cn(
+          'flex-shrink-0 font-mono text-body-sm font-semibold',
+          hitRateTier === 'high' ? 'text-prob-high' :
+          hitRateTier === 'mid' ? 'text-prob-mid' : 'text-txt-tertiary',
+        )}>
+          {(streak.hitRate * 100).toFixed(0)}%
         </span>
-      </div>
 
-      {/* Hit rate */}
-      <span className={cn(
-        'flex-shrink-0 font-mono text-body-sm font-semibold',
-        hitRateTier === 'high' ? 'text-prob-high' :
-        hitRateTier === 'mid' ? 'text-prob-mid' : 'text-txt-tertiary',
-      )}>
-        {(streak.hitRate * 100).toFixed(0)}%
-      </span>
+        {/* Arrow — rotates when expanded */}
+        <ChevronRight className={cn(
+          'h-4 w-4 flex-shrink-0 text-txt-tertiary transition-transform duration-200 group-hover:text-txt-primary',
+          isExpanded && 'rotate-90',
+        )} />
+      </button>
 
-      {/* Arrow */}
-      <ChevronRight className="h-4 w-4 flex-shrink-0 text-txt-tertiary transition-colors group-hover:text-txt-primary" />
+      {/* Expanded detail panel */}
+      {isExpanded && (
+        <div className="border-t border-warm-sand bg-warm-cream/40 px-4 py-4">
+          <div className="grid gap-4 sm:grid-cols-3">
+            {/* Stat: Hit Rate */}
+            <div className="rounded-oracle-sm bg-white p-3">
+              <p className="mb-1 text-caption font-semibold uppercase tracking-widest text-txt-tertiary">Hit Rate</p>
+              <p className={cn(
+                'font-mono text-heading font-bold',
+                hitRateTier === 'high' ? 'text-prob-high' :
+                hitRateTier === 'mid' ? 'text-prob-mid' : 'text-txt-tertiary',
+              )}>
+                {hitCount}/{streak.windowSize}
+              </p>
+              <p className="mt-0.5 text-caption text-txt-tertiary">
+                {(streak.hitRate * 100).toFixed(1)}% success rate
+              </p>
+            </div>
+
+            {/* Stat: Confidence */}
+            <div className="rounded-oracle-sm bg-white p-3">
+              <p className="mb-1 text-caption font-semibold uppercase tracking-widest text-txt-tertiary">Confidence</p>
+              <p className={cn(
+                'font-mono text-heading font-bold',
+                confTier === 'high' ? 'text-prob-high' :
+                confTier === 'mid' ? 'text-prob-mid' : 'text-txt-tertiary',
+              )}>
+                {(streak.confidence * 100).toFixed(0)}%
+              </p>
+              <p className="mt-0.5 text-caption text-txt-tertiary">
+                Quality score: {(streak.qualityScore * 100).toFixed(0)}
+              </p>
+            </div>
+
+            {/* Stat: Streak Info */}
+            <div className="rounded-oracle-sm bg-white p-3">
+              <p className="mb-1 text-caption font-semibold uppercase tracking-widest text-txt-tertiary">Streak</p>
+              <p className="font-mono text-heading font-bold text-oracle-gold-dark">
+                {streak.streakLength} consecutive
+              </p>
+              <p className="mt-0.5 text-caption text-txt-tertiary">
+                Window: {streak.windowSize} matches
+              </p>
+            </div>
+          </div>
+
+          {/* Summary */}
+          {streak.summary && (
+            <p className="mt-3 rounded-oracle-sm bg-white px-3 py-2 text-body-sm text-txt-secondary">
+              {streak.summary}
+            </p>
+          )}
+
+          {/* Visual streak indicator */}
+          <div className="mt-3">
+            <p className="mb-2 text-caption font-semibold uppercase tracking-widest text-txt-tertiary">
+              Recent Results
+            </p>
+            <div className="flex gap-1">
+              {Array.from({ length: streak.windowSize }).map((_, i) => {
+                const isHit = i < streak.streakLength;
+                return (
+                  <div
+                    key={i}
+                    className={cn(
+                      'h-2 flex-1 rounded-full',
+                      isHit ? 'bg-prob-high' : 'bg-warm-stone/30',
+                    )}
+                    title={isHit ? 'Hit' : 'Miss'}
+                  />
+                );
+              })}
+            </div>
+            <div className="mt-1 flex justify-between text-[10px] text-txt-tertiary">
+              <span>Most recent</span>
+              <span>Oldest</span>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
