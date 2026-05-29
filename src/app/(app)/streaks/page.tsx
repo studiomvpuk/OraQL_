@@ -132,9 +132,9 @@ export default function StreaksPage() {
           <h2 className="font-display text-xl tracking-tight text-txt-primary sm:text-display-sm">
             Suggested Tickets
           </h2>
-          <span className="rounded-full bg-warm-sand px-3 py-1 text-caption font-semibold text-txt-secondary">
+          {/* <span className="rounded-full bg-warm-sand px-3 py-1 text-caption font-semibold text-txt-secondary">
             AI-generated
-          </span>
+          </span> */}
         </div>
         <p className="mb-6 max-w-2xl text-body-sm text-txt-secondary">
           Multi-leg tickets assembled from the strongest active streaks across all upcoming matches and leagues.
