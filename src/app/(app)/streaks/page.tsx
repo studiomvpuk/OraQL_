@@ -11,6 +11,7 @@ import {
   Plus,
   Sparkles,
   Shield,
+  X,
 } from 'lucide-react';
 import { cn, formatProbability, getProbabilityTier } from '@/lib/utils';
 import { useBuilderStore } from '@/stores/builder.store';
@@ -23,6 +24,7 @@ export default function StreaksPage() {
   const [stats, setStats] = useState<StreakStats | null>(null);
   const [leagues, setLeagues] = useState<League[]>([]);
   const [selectedLeague, setSelectedLeague] = useState<string | null>(null);
+  const [openLetter, setOpenLetter] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [applyingTicketId, setApplyingTicketId] = useState<string | null>(null);
   const [appliedTicketId, setAppliedTicketId] = useState<string | null>(null);
@@ -61,6 +63,17 @@ export default function StreaksPage() {
     const ln = s.leagueName || s.team?.league?.name;
     if (ln) streakCountByLeague.set(ln, (streakCountByLeague.get(ln) || 0) + 1);
   }
+
+  // Group leagues by first letter for the A-Z grid
+  const leaguesByLetter = new Map<string, League[]>();
+  for (const league of leagues) {
+    const letter = league.name.charAt(0).toUpperCase();
+    const arr = leaguesByLetter.get(letter) || [];
+    arr.push(league);
+    leaguesByLetter.set(letter, arr);
+  }
+
+  const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 
   async function applyTicket(ticket: SuggestedTicket) {
     if (applyingTicketId) return;
@@ -197,59 +210,156 @@ export default function StreaksPage() {
           </span>
         </div>
 
-        {/* League filter bar */}
+        {/* League filter: A-Z grid + active filter pill */}
         {!isLoading && leagues.length > 0 && (
-          <div className="mb-6 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
-            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-              {/* "All" pill */}
+          <div className="mb-6">
+            {/* Active filter indicator */}
+            {selectedLeague && (
+              <div className="mb-3 flex items-center gap-2">
+                <span className="text-caption font-semibold text-txt-tertiary">Filtered by:</span>
+                <button
+                  onClick={() => setSelectedLeague(null)}
+                  className="flex items-center gap-1.5 rounded-full border border-oracle-gold bg-oracle-gold/15 px-3 py-1 text-caption font-semibold text-oracle-gold-dark transition-colors hover:bg-oracle-gold/25"
+                >
+                  {selectedLeague}
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            )}
+
+            {/* A-Z letter grid */}
+            <div className="flex flex-wrap gap-1.5">
+              {/* "All" square */}
               <button
-                onClick={() => setSelectedLeague(null)}
+                onClick={() => { setSelectedLeague(null); setOpenLetter(null); }}
                 className={cn(
-                  'flex flex-shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-caption font-semibold transition-all duration-150',
+                  'flex h-9 w-9 items-center justify-center rounded-oracle-sm text-caption font-bold transition-all duration-150',
                   !selectedLeague
-                    ? 'border-oracle-gold bg-oracle-gold/15 text-oracle-gold-dark'
-                    : 'border-warm-sand bg-white text-txt-secondary hover:border-warm-stone hover:bg-warm-cream',
+                    ? 'bg-oracle-gold/15 text-oracle-gold-dark ring-1 ring-oracle-gold'
+                    : 'bg-warm-cream text-txt-secondary hover:bg-warm-sand',
                 )}
+                title="Show all leagues"
               >
                 All
-                <span className={cn(
-                  'rounded-full px-1.5 py-0.5 text-[10px] font-bold leading-none',
-                  !selectedLeague ? 'bg-oracle-gold/20 text-oracle-gold-dark' : 'bg-warm-cream text-txt-tertiary',
-                )}>
-                  {streaks.length}
-                </span>
               </button>
 
-              {leagues.map((league) => {
-                const count = streakCountByLeague.get(league.name) || 0;
-                const isActive = selectedLeague === league.name;
+              {ALPHABET.map((letter) => {
+                const letterLeagues = leaguesByLetter.get(letter) || [];
+                const hasLeagues = letterLeagues.length > 0;
+                const letterStreakCount = letterLeagues.reduce(
+                  (sum, l) => sum + (streakCountByLeague.get(l.name) || 0), 0,
+                );
+                const hasActiveFilter = selectedLeague && letterLeagues.some((l) => l.name === selectedLeague);
+
                 return (
                   <button
-                    key={league.id}
-                    onClick={() => setSelectedLeague(isActive ? null : league.name)}
+                    key={letter}
+                    onClick={() => hasLeagues && setOpenLetter(letter)}
+                    disabled={!hasLeagues}
                     className={cn(
-                      'flex flex-shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-caption font-semibold transition-all duration-150',
-                      isActive
-                        ? 'border-oracle-gold bg-oracle-gold/15 text-oracle-gold-dark'
-                        : count > 0
-                          ? 'border-warm-sand bg-white text-txt-secondary hover:border-warm-stone hover:bg-warm-cream'
-                          : 'border-warm-sand/60 bg-warm-cream/40 text-txt-tertiary hover:border-warm-stone hover:bg-warm-cream',
+                      'relative flex h-9 w-9 items-center justify-center rounded-oracle-sm font-mono text-caption font-bold transition-all duration-150',
+                      hasActiveFilter
+                        ? 'bg-oracle-gold/15 text-oracle-gold-dark ring-1 ring-oracle-gold'
+                        : hasLeagues && letterStreakCount > 0
+                          ? 'bg-white text-txt-primary ring-1 ring-warm-sand hover:bg-warm-cream hover:ring-warm-stone'
+                          : hasLeagues
+                            ? 'bg-warm-cream/60 text-txt-tertiary ring-1 ring-warm-sand/60 hover:bg-warm-cream hover:ring-warm-stone'
+                            : 'bg-warm-cream/30 text-txt-tertiary/40 cursor-default',
                     )}
+                    title={hasLeagues ? `${letterLeagues.length} league${letterLeagues.length !== 1 ? 's' : ''}` : 'No leagues'}
                   >
-                    {league.logoUrl && (
-                      <img src={league.logoUrl} alt="" className="h-4 w-4 object-contain" />
+                    {letter}
+                    {hasLeagues && letterStreakCount > 0 && (
+                      <span className="absolute -right-0.5 -top-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-oracle-gold text-[8px] font-bold text-white">
+                        {letterStreakCount > 9 ? '9+' : letterStreakCount}
+                      </span>
                     )}
-                    <span className="max-w-[120px] truncate">{league.name}</span>
-                    <span className={cn(
-                      'rounded-full px-1.5 py-0.5 text-[10px] font-bold leading-none',
-                      isActive ? 'bg-oracle-gold/20 text-oracle-gold-dark' :
-                      count > 0 ? 'bg-warm-cream text-txt-tertiary' : 'bg-warm-sand/40 text-txt-tertiary',
-                    )}>
-                      {count}
-                    </span>
                   </button>
                 );
               })}
+            </div>
+          </div>
+        )}
+
+        {/* Letter modal */}
+        {openLetter && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setOpenLetter(null)}>
+            <div
+              className="w-full max-w-md rounded-oracle-lg bg-white shadow-xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Modal header */}
+              <div className="flex items-center justify-between border-b border-warm-sand px-5 py-4">
+                <div className="flex items-center gap-3">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-oracle-sm bg-oracle-gold/15 font-mono text-heading font-bold text-oracle-gold-dark">
+                    {openLetter}
+                  </span>
+                  <div>
+                    <h3 className="font-display text-body font-semibold text-txt-primary">
+                      Leagues
+                    </h3>
+                    <p className="text-caption text-txt-tertiary">
+                      {(leaguesByLetter.get(openLetter) || []).length} league{(leaguesByLetter.get(openLetter) || []).length !== 1 ? 's' : ''}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setOpenLetter(null)}
+                  className="rounded-oracle-sm p-1.5 text-txt-tertiary transition-colors hover:bg-warm-cream hover:text-txt-primary"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              {/* League list */}
+              <div className="max-h-80 overflow-y-auto p-2">
+                {(leaguesByLetter.get(openLetter) || []).map((league) => {
+                  const count = streakCountByLeague.get(league.name) || 0;
+                  const isSelected = selectedLeague === league.name;
+                  return (
+                    <button
+                      key={league.id}
+                      onClick={() => {
+                        setSelectedLeague(isSelected ? null : league.name);
+                        setOpenLetter(null);
+                      }}
+                      className={cn(
+                        'flex w-full items-center gap-3 rounded-oracle-md px-3 py-2.5 text-left transition-all duration-150',
+                        isSelected
+                          ? 'bg-oracle-gold/10'
+                          : 'hover:bg-warm-cream',
+                      )}
+                    >
+                      {league.logoUrl ? (
+                        <img src={league.logoUrl} alt="" className="h-6 w-6 flex-shrink-0 object-contain" />
+                      ) : (
+                        <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-warm-sand text-[10px] font-bold text-txt-inverse">
+                          {league.name.charAt(0)}
+                        </div>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <p className={cn(
+                          'truncate text-body-sm font-medium',
+                          isSelected ? 'text-oracle-gold-dark' : 'text-txt-primary',
+                        )}>
+                          {league.name}
+                        </p>
+                        {league.country && (
+                          <p className="text-caption text-txt-tertiary">{league.country}</p>
+                        )}
+                      </div>
+                      <span className={cn(
+                        'rounded-full px-2 py-0.5 text-caption font-semibold',
+                        count > 0
+                          ? 'bg-oracle-gold/15 text-oracle-gold-dark'
+                          : 'bg-warm-cream text-txt-tertiary',
+                      )}>
+                        {count} {count === 1 ? 'streak' : 'streaks'}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
         )}
