@@ -79,14 +79,22 @@ export const useAuthStore = create<AuthState>((set) => ({
         set({ isLoading: false });
         return;
       }
+      // api.get will auto-refresh if the access token is expired (401 → tryRefresh)
       const res = await api.get<MeResponse>('/auth/me');
       set({ user: res.user, isAuthenticated: true, isLoading: false });
-    } catch {
-      api.setToken(null);
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem('oracle_refresh');
+    } catch (err: any) {
+      // Only clear tokens on auth errors (401/403), not on network failures
+      if (err?.status === 401 || err?.status === 403) {
+        api.setToken(null);
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('oracle_refresh');
+        }
+        set({ user: null, isAuthenticated: false, isLoading: false });
+      } else {
+        // Network error or server error — keep tokens, just set not loading
+        // User may reconnect later without re-authenticating
+        set({ isLoading: false });
       }
-      set({ user: null, isAuthenticated: false, isLoading: false });
     }
   },
 

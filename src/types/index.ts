@@ -273,9 +273,12 @@ export interface StreakSuggestion {
   marketName: string;
   line?: number;
   confidence: number;
-  probability: number;
+  /** May be absent — backend returns streakBoost, not probability */
+  probability?: number;
+  streakBoost?: number;
   summary: string;
   validationLevel?: ValidationLevel;
+  validationSummary?: string;
   validationDetails?: {
     availableKeyPlayers: number;
     totalKeyPlayers: number;

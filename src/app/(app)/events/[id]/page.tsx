@@ -1243,7 +1243,7 @@ function StreakSuggestionCard({ suggestion }: { suggestion: StreakSuggestion }) 
                 <span className="ml-1 font-mono text-body-sm text-txt-secondary">{suggestion.line}</span>
               )}
             </span>
-            {suggestion.validationLevel && (
+            {suggestion.validationLevel && suggestion.validationLevel !== 'UNKNOWN' && (
               <span className={cn(
                 'rounded-full px-2 py-0.5 text-[10px] font-bold uppercase',
                 validationColors[suggestion.validationLevel] || validationColors.UNKNOWN,
@@ -1298,7 +1298,7 @@ function StreakSuggestionCard({ suggestion }: { suggestion: StreakSuggestion }) 
           </div>
         </div>
         <span className="text-caption text-txt-tertiary">
-          P: {(suggestion.probability * 100).toFixed(1)}%
+          {formatProbability(suggestion.probability ?? suggestion.confidence)}
         </span>
       </div>
     </div>
