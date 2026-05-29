@@ -371,13 +371,14 @@ function StreakRow({ streak, rank }: { streak: ScoredStreak; rank: number }) {
             <p className="truncate font-display text-body font-semibold tracking-tight text-txt-primary">
               {teamName}
             </p>
-            {leagueName && (
-              <span className="hidden text-caption text-txt-tertiary sm:inline">
-                {leagueName}
-              </span>
-            )}
           </div>
           <p className="mt-0.5 text-caption text-txt-tertiary">
+            {leagueName && (
+              <>
+                <span className="font-medium text-txt-secondary">{leagueName}</span>
+                <span className="mx-1.5 text-warm-stone">·</span>
+              </>
+            )}
             {formatMarketName(streak.marketName)}
             {streak.line != null && ` ${streak.line}`}
             <span className="mx-1.5 text-warm-stone">·</span>
@@ -462,6 +463,14 @@ function StreakRow({ streak, rank }: { streak: ScoredStreak; rank: number }) {
             <p className="mt-3 rounded-oracle-sm bg-white px-3 py-2 text-body-sm text-txt-secondary">
               {streak.summary}
             </p>
+          )}
+
+          {/* League */}
+          {leagueName && (
+            <div className="mt-3 flex items-center gap-2">
+              <span className="text-caption font-semibold uppercase tracking-widest text-txt-tertiary">League</span>
+              <span className="text-body-sm font-medium text-txt-primary">{leagueName}</span>
+            </div>
           )}
 
           {/* Visual streak indicator */}
