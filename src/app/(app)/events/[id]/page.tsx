@@ -17,6 +17,7 @@ import {
   ChevronRight,
   X,
   Sparkles,
+  Flame,
 } from 'lucide-react';
 import Link from 'next/link';
 import { cn, formatKickoff, formatCategory, formatProbability, getProbabilityTier } from '@/lib/utils';
@@ -33,9 +34,10 @@ import type {
   MatchStat,
   TeamContext,
   TeamFormEntry,
+  StreakSuggestion,
 } from '@/types';
 
-type TabId = 'markets' | 'odds' | 'lineups' | 'stats';
+type TabId = 'markets' | 'streaks' | 'odds' | 'lineups' | 'stats';
 
 export default function EventDetailPage() {
   const params = useParams();
@@ -47,6 +49,10 @@ export default function EventDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const addToBuilder = useBuilderStore((s) => s.add);
 
+  // Streak suggestions for this event
+  const [streakSuggestions, setStreakSuggestions] = useState<StreakSuggestion[]>([]);
+  const [streaksLoading, setStreaksLoading] = useState(false);
+
   // Team context (form + injuries) — loaded when market selected
   const [homeContext, setHomeContext] = useState<TeamContext | null>(null);
   const [awayContext, setAwayContext] = useState<TeamContext | null>(null);
@@ -56,10 +62,13 @@ export default function EventDetailPage() {
     if (eventId) loadEvent();
   }, [eventId]);
 
-  // Load team context when event loads
+  // Load team context and streaks when event loads
   useEffect(() => {
     if (event && !homeContext && !contextLoading) {
       loadTeamContext();
+    }
+    if (event && streakSuggestions.length === 0 && !streaksLoading) {
+      loadStreaks();
     }
   }, [event]);
 
@@ -72,6 +81,20 @@ export default function EventDetailPage() {
       // handle error
     }
     setIsLoading(false);
+  }
+
+  async function loadStreaks() {
+    if (!event) return;
+    setStreaksLoading(true);
+    try {
+      const res = await api.get<{ suggestions: StreakSuggestion[]; total: number }>(
+        `/streaks/event/${event.id}`,
+      );
+      setStreakSuggestions(res.suggestions || []);
+    } catch {
+      // Streaks are supplementary
+    }
+    setStreaksLoading(false);
   }
 
   async function loadTeamContext() {
@@ -131,6 +154,7 @@ export default function EventDetailPage() {
   // Tabs config
   const tabs: { id: TabId; label: string; icon: typeof BarChart3; count?: number }[] = [
     { id: 'markets', label: 'Markets', icon: TrendingUp, count: event.markets.length },
+    { id: 'streaks', label: 'Streaks', icon: Flame, count: streakSuggestions.length },
     { id: 'odds', label: 'Odds', icon: BarChart3, count: event.bookmakerOdds?.length || 0 },
     { id: 'lineups', label: 'Lineups', icon: Users, count: event.lineups?.length || 0 },
     { id: 'stats', label: 'Stats', icon: Shield, count: event.matchStats?.length || 0 },
@@ -306,6 +330,15 @@ export default function EventDetailPage() {
                 filteredMarkets={filteredMarkets}
                 selectedMarket={selectedMarket}
                 setSelectedMarket={setSelectedMarket}
+                addToBuilder={addToBuilder}
+              />
+            )}
+
+            {/* ── Streaks Tab ── */}
+            {activeTab === 'streaks' && (
+              <StreaksTab
+                suggestions={streakSuggestions}
+                isLoading={streaksLoading}
                 addToBuilder={addToBuilder}
               />
             )}
@@ -1131,6 +1164,163 @@ function LineupPanel({ lineup, teamName }: { lineup: Lineup; teamName: string })
       )}
     </div>
   );
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Streaks Tab Component
+   ═══════════════════════════════════════════════════════════ */
+function StreaksTab({
+  suggestions,
+  isLoading,
+  addToBuilder,
+}: {
+  suggestions: StreakSuggestion[];
+  isLoading: boolean;
+  addToBuilder: (id: string) => Promise<void>;
+}) {
+  if (isLoading) {
+    return (
+      <div className="space-y-3">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="h-24 animate-pulse rounded-oracle-md bg-warm-cream" />
+        ))}
+      </div>
+    );
+  }
+
+  if (suggestions.length === 0) {
+    return (
+      <div className="rounded-oracle-md border border-dashed border-warm-stone bg-warm-white p-8 text-center">
+        <Flame className="mx-auto mb-3 h-8 w-8 text-txt-tertiary" />
+        <p className="text-body-sm text-txt-tertiary">
+          No active streaks found for this match.
+        </p>
+        <p className="mt-1 text-caption text-txt-tertiary">
+          Streaks are detected from patterns across recent matches.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <p className="text-body-sm text-txt-secondary">
+        {suggestions.length} streak-backed {suggestions.length === 1 ? 'suggestion' : 'suggestions'} for this match, ranked by confidence.
+      </p>
+
+      <div className="space-y-3">
+        {suggestions.map((s) => (
+          <StreakSuggestionCard
+            key={`${s.streakId}-${s.marketName}`}
+            suggestion={s}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ─── Streak Suggestion Card ─── */
+function StreakSuggestionCard({ suggestion }: { suggestion: StreakSuggestion }) {
+  const confTier = getProbabilityTier(suggestion.confidence);
+  const validationColors: Record<string, string> = {
+    HIGH: 'bg-prob-high/15 text-prob-high',
+    MEDIUM: 'bg-prob-mid/15 text-prob-mid',
+    LOW: 'bg-danger/15 text-danger',
+    UNKNOWN: 'bg-warm-sand text-txt-secondary',
+  };
+
+  return (
+    <div className="rounded-oracle-md border border-warm-sand bg-white p-4 transition-all duration-200 hover:border-warm-stone hover:shadow-soft">
+      {/* Header row */}
+      <div className="mb-3 flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <Flame className="h-4 w-4 flex-shrink-0 text-oracle-gold" />
+            <span className="font-display text-body font-semibold tracking-tight text-txt-primary">
+              {formatStreakMarketName(suggestion.marketName)}
+              {suggestion.line != null && (
+                <span className="ml-1 font-mono text-body-sm text-txt-secondary">{suggestion.line}</span>
+              )}
+            </span>
+            {suggestion.validationLevel && (
+              <span className={cn(
+                'rounded-full px-2 py-0.5 text-[10px] font-bold uppercase',
+                validationColors[suggestion.validationLevel] || validationColors.UNKNOWN,
+              )}>
+                {suggestion.validationLevel}
+              </span>
+            )}
+          </div>
+        </div>
+
+        <span className={cn(
+          'flex-shrink-0 rounded-full px-3 py-1 font-mono text-body-sm font-bold',
+          confTier === 'high' ? 'bg-prob-high/15 text-prob-high' :
+          confTier === 'mid' ? 'bg-prob-mid/15 text-prob-mid' : 'bg-warm-sand text-txt-secondary',
+        )}>
+          {(suggestion.confidence * 100).toFixed(0)}%
+        </span>
+      </div>
+
+      {/* Summary */}
+      <p className="mb-3 text-body-sm text-txt-secondary leading-relaxed">
+        {suggestion.summary}
+      </p>
+
+      {/* Validation details */}
+      {suggestion.validationDetails && suggestion.validationDetails.totalKeyPlayers > 0 && (
+        <div className="mb-3 flex items-center gap-2 text-caption text-txt-tertiary">
+          <Shield className="h-3 w-3" />
+          <span>
+            {suggestion.validationDetails.availableKeyPlayers}/{suggestion.validationDetails.totalKeyPlayers} key players available
+          </span>
+          {suggestion.validationDetails.missingPlayers.length > 0 && (
+            <span className="text-danger">
+              (Missing: {suggestion.validationDetails.missingPlayers.slice(0, 3).join(', ')}{suggestion.validationDetails.missingPlayers.length > 3 ? '...' : ''})
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Probability bar */}
+      <div className="flex items-center gap-3">
+        <div className="flex-1">
+          <div className="flex h-2 overflow-hidden rounded-full bg-warm-cream">
+            <div
+              className={cn(
+                'rounded-full transition-all',
+                confTier === 'high' ? 'bg-prob-high' :
+                confTier === 'mid' ? 'bg-prob-mid' : 'bg-warm-stone',
+              )}
+              style={{ width: `${Math.min(suggestion.confidence * 100, 100)}%` }}
+            />
+          </div>
+        </div>
+        <span className="text-caption text-txt-tertiary">
+          P: {(suggestion.probability * 100).toFixed(1)}%
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function formatStreakMarketName(name: string): string {
+  const labels: Record<string, string> = {
+    GOALS_OVER: 'Goals Over',
+    GOALS_UNDER: 'Goals Under',
+    TEAM_GOALS_OVER: 'Team Goals Over',
+    TEAM_GOALS_UNDER: 'Team Goals Under',
+    CORNERS_OVER: 'Corners Over',
+    CORNERS_UNDER: 'Corners Under',
+    CARDS_OVER: 'Cards Over',
+    CARDS_UNDER: 'Cards Under',
+    BTTS_YES: 'Both Teams to Score',
+    BTTS_NO: 'No BTTS',
+    CLEAN_SHEET: 'Clean Sheet',
+    MATCH_RESULT_HOME: 'Home Win',
+  };
+  return labels[name] || name.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 /* ─── Stats Panel Component ─── */

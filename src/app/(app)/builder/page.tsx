@@ -1,22 +1,61 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Layers, X, Copy, Trash2, ArrowRight, Sparkles } from 'lucide-react';
-import { cn, formatProbability, formatKickoff } from '@/lib/utils';
+import { Layers, X, Copy, Trash2, ArrowRight, Sparkles, Flame, Plus, Trophy } from 'lucide-react';
+import { cn, formatProbability, formatKickoff, getProbabilityTier } from '@/lib/utils';
 import { ProbabilityBadge } from '@/components/ui/ProbabilityBadge';
 import { Button } from '@/components/ui/Button';
 import { useBuilderStore } from '@/stores/builder.store';
+import { api } from '@/lib/api';
 import Link from 'next/link';
+import type { SuggestedTicket } from '@/types';
 
 export default function BuilderPage() {
   const { selections, count, combinedProbability, load, remove, clear, exportText, isLoading } =
     useBuilderStore();
   const [copied, setCopied] = useState(false);
   const [showExportText, setShowExportText] = useState<string | null>(null);
+  const [suggestedTickets, setSuggestedTickets] = useState<SuggestedTicket[]>([]);
+  const [ticketsLoading, setTicketsLoading] = useState(false);
+  const [applyingId, setApplyingId] = useState<string | null>(null);
+  const [appliedId, setAppliedId] = useState<string | null>(null);
 
   useEffect(() => {
     load();
+    loadSuggestions();
   }, [load]);
+
+  async function loadSuggestions() {
+    setTicketsLoading(true);
+    try {
+      const res = await api.get<{ tickets: SuggestedTicket[]; total: number }>(
+        '/builder/suggestions?limit=4',
+      );
+      setSuggestedTickets(res.tickets || []);
+    } catch {
+      // supplementary
+    }
+    setTicketsLoading(false);
+  }
+
+  async function applyTicket(ticket: SuggestedTicket) {
+    if (applyingId) return;
+    setApplyingId(ticket.id);
+    try {
+      const legsWithMarkets = ticket.legs.filter((l) => l.marketId);
+      if (legsWithMarkets.length > 0) {
+        await api.post('/builder/apply-suggestion', {
+          legs: legsWithMarkets.map((l) => ({ marketId: l.marketId })),
+        });
+        await load();
+      }
+      setAppliedId(ticket.id);
+      setTimeout(() => setAppliedId(null), 2500);
+    } catch {
+      // silently fail
+    }
+    setApplyingId(null);
+  }
 
   const handleExport = async () => {
     try {
@@ -101,6 +140,102 @@ export default function BuilderPage() {
         </div>
       </div>
 
+      {/* ─── Suggested Tickets Section ─── */}
+      {(suggestedTickets.length > 0 || ticketsLoading) && (
+        <div className="bg-warm-cream px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+          <div className="mb-4 flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-oracle-gold" />
+            <h3 className="font-display text-heading tracking-tight text-txt-primary">
+              Suggested Tickets
+            </h3>
+            <span className="rounded-full bg-warm-sand px-2 py-0.5 text-caption font-semibold text-txt-secondary">
+              AI
+            </span>
+          </div>
+          <p className="mb-4 text-body-sm text-txt-secondary">
+            Pre-built multi-leg tickets from the strongest active streaks. Apply one to load it into your builder.
+          </p>
+
+          {ticketsLoading ? (
+            <div className="flex gap-3 overflow-hidden">
+              {[1, 2].map((i) => (
+                <div key={i} className="h-44 w-72 flex-shrink-0 animate-pulse rounded-oracle-md bg-warm-sand/50" />
+              ))}
+            </div>
+          ) : (
+            <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 scrollbar-hide">
+              {suggestedTickets.map((ticket) => (
+                <div
+                  key={ticket.id}
+                  className="w-72 flex-shrink-0 snap-start rounded-oracle-md border border-warm-sand bg-white p-4 shadow-soft transition-all hover:shadow-card sm:w-80"
+                >
+                  {/* Ticket header */}
+                  <div className="mb-3 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="rounded-full bg-oracle-gold/15 px-2 py-0.5 text-[10px] font-bold text-oracle-gold-dark">
+                        {ticket.legs.length}-LEG
+                      </span>
+                      <span className="text-caption text-txt-tertiary">
+                        {new Set(ticket.legs.map((l) => l.leagueName)).size} leagues
+                      </span>
+                    </div>
+                    <span className="font-mono text-body-sm font-bold text-prob-high">
+                      {formatProbability(ticket.combinedProbability)}
+                    </span>
+                  </div>
+
+                  {/* Legs preview */}
+                  <div className="mb-3 space-y-1.5">
+                    {ticket.legs.slice(0, 4).map((leg, i) => (
+                      <div key={`${leg.eventId}-${i}`} className="flex items-center gap-2 text-caption">
+                        <Flame className="h-3 w-3 flex-shrink-0 text-oracle-gold/60" />
+                        <span className="truncate text-txt-primary font-medium">
+                          {leg.teamName.length > 12 ? leg.teamName.substring(0, 12) : leg.teamName}
+                        </span>
+                        <span className="text-txt-tertiary">
+                          {shortLabel(leg.marketName, leg.line)}
+                        </span>
+                      </div>
+                    ))}
+                    {ticket.legs.length > 4 && (
+                      <p className="text-caption text-txt-tertiary pl-5">+{ticket.legs.length - 4} more</p>
+                    )}
+                  </div>
+
+                  {/* Apply button */}
+                  <button
+                    onClick={() => applyTicket(ticket)}
+                    disabled={applyingId === ticket.id || appliedId === ticket.id}
+                    className={cn(
+                      'flex w-full items-center justify-center gap-1.5 rounded-oracle-sm px-3 py-2 text-body-sm font-semibold transition-all',
+                      appliedId === ticket.id
+                        ? 'bg-prob-high/15 text-prob-high'
+                        : applyingId === ticket.id
+                          ? 'bg-warm-cream text-txt-tertiary'
+                          : 'bg-dark-ink text-txt-inverse hover:bg-dark-charcoal',
+                    )}
+                  >
+                    {appliedId === ticket.id ? (
+                      <>
+                        <Trophy className="h-3.5 w-3.5" />
+                        Applied!
+                      </>
+                    ) : applyingId === ticket.id ? (
+                      'Applying...'
+                    ) : (
+                      <>
+                        <Plus className="h-3.5 w-3.5" />
+                        Apply to Builder
+                      </>
+                    )}
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Selections Section - Warm Light Surface */}
       {isLoading ? (
         <div className="bg-warm-white px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
@@ -176,4 +311,22 @@ export default function BuilderPage() {
       )}
     </div>
   );
+}
+
+function shortLabel(marketName: string, line: number | null): string {
+  const labels: Record<string, string> = {
+    GOALS_OVER: `O${line}G`,
+    GOALS_UNDER: `U${line}G`,
+    TEAM_GOALS_OVER: `TO${line}G`,
+    TEAM_GOALS_UNDER: `TU${line}G`,
+    CORNERS_OVER: `O${line}C`,
+    CORNERS_UNDER: `U${line}C`,
+    CARDS_OVER: `O${line}Cd`,
+    CARDS_UNDER: `U${line}Cd`,
+    BTTS_YES: 'BTTS',
+    BTTS_NO: 'NoBTTS',
+    CLEAN_SHEET: 'CS',
+    MATCH_RESULT_HOME: 'Win',
+  };
+  return labels[marketName] || marketName;
 }

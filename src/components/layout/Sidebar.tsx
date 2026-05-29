@@ -9,6 +9,7 @@ import {
   LogOut,
   Trophy,
   X,
+  Flame,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/auth.store';
@@ -16,6 +17,7 @@ import { useAuthStore } from '@/stores/auth.store';
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/picks', label: 'OraQL_ Picks', icon: Star },
+  { href: '/streaks', label: 'Streaks', icon: Flame },
   { href: '/builder', label: 'Bet Builder', icon: Layers },
 ];
 

@@ -225,3 +225,91 @@ export interface TokenPair {
   accessToken: string;
   refreshToken: string;
 }
+
+// ─── Streak Types ───
+
+export type VenueFilter = 'ALL' | 'HOME' | 'AWAY';
+export type ValidationLevel = 'HIGH' | 'MEDIUM' | 'LOW' | 'UNKNOWN';
+
+export interface Streak {
+  id: string;
+  teamId: string;
+  team?: Team;
+  marketName: string;
+  line?: number;
+  venueFilter: VenueFilter;
+  windowSize: number;
+  streakLength: number;
+  hitRate: number;
+  confidence: number;
+  isActive: boolean;
+  lastMatchDate?: string;
+  streakMatches?: StreakMatch[];
+}
+
+export interface StreakMatch {
+  id: string;
+  matchDate: string;
+  opponent?: string;
+  venue?: string;
+  result: boolean;
+  statValue?: number;
+}
+
+export interface ScoredStreak extends Streak {
+  qualityScore: number;
+  recencyScore: number;
+}
+
+export interface StreakSuggestion {
+  streakId: string;
+  teamId: string;
+  marketName: string;
+  line?: number;
+  confidence: number;
+  probability: number;
+  summary: string;
+  validationLevel?: ValidationLevel;
+  validationDetails?: {
+    availableKeyPlayers: number;
+    totalKeyPlayers: number;
+    missingPlayers: string[];
+  };
+}
+
+export interface TicketLeg {
+  eventId: string;
+  marketId: string | null;
+  teamName: string;
+  teamLogoUrl: string | null;
+  leagueName: string;
+  leagueCountry: string | null;
+  opponent: string;
+  kickoffAt: string;
+  marketName: string;
+  line: number | null;
+  probability: number;
+  confidence: number;
+  streakId: string;
+  streakSummary: string;
+  validationLevel?: string;
+}
+
+export interface SuggestedTicket {
+  id: string;
+  legs: TicketLeg[];
+  combinedProbability: number;
+  averageConfidence: number;
+  averageHitRate: number;
+  diversityScore: number;
+  qualityScore: number;
+  summary: string;
+}
+
+export interface StreakStats {
+  totalStreaks: number;
+  activeStreaks: number;
+  averageHitRate: number | null;
+  averageStreakLength: number | null;
+  averageConfidence: number | null;
+}
