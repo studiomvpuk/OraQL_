@@ -15,12 +15,14 @@ import {
 import { cn, formatProbability, getProbabilityTier } from '@/lib/utils';
 import { useBuilderStore } from '@/stores/builder.store';
 import { api } from '@/lib/api';
-import type { ScoredStreak, SuggestedTicket, StreakStats } from '@/types';
+import type { ScoredStreak, SuggestedTicket, StreakStats, League } from '@/types';
 
 export default function StreaksPage() {
   const [streaks, setStreaks] = useState<ScoredStreak[]>([]);
   const [tickets, setTickets] = useState<SuggestedTicket[]>([]);
   const [stats, setStats] = useState<StreakStats | null>(null);
+  const [leagues, setLeagues] = useState<League[]>([]);
+  const [selectedLeague, setSelectedLeague] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [applyingTicketId, setApplyingTicketId] = useState<string | null>(null);
   const [appliedTicketId, setAppliedTicketId] = useState<string | null>(null);
@@ -32,18 +34,32 @@ export default function StreaksPage() {
   async function loadData() {
     setIsLoading(true);
     try {
-      const [streaksRes, ticketsRes, statsRes] = await Promise.all([
+      const [streaksRes, ticketsRes, statsRes, leaguesRes] = await Promise.all([
         api.get<{ streaks: ScoredStreak[]; total: number }>('/streaks?limit=30'),
         api.get<{ tickets: SuggestedTicket[]; total: number }>('/streaks/tickets?limit=6'),
         api.get<StreakStats>('/streaks/stats'),
+        api.get<{ leagues: League[]; total: number }>('/streaks/leagues'),
       ]);
       setStreaks(streaksRes.streaks || []);
       setTickets(ticketsRes.tickets || []);
       setStats(statsRes);
+      setLeagues(leaguesRes.leagues || []);
     } catch {
       // Show empty state
     }
     setIsLoading(false);
+  }
+
+  // Client-side filter — instant, no API calls
+  const filteredStreaks = selectedLeague
+    ? streaks.filter((s) => s.leagueName === selectedLeague || s.team?.league?.name === selectedLeague)
+    : streaks;
+
+  // Count streaks per league (from already-loaded data)
+  const streakCountByLeague = new Map<string, number>();
+  for (const s of streaks) {
+    const ln = s.leagueName || s.team?.league?.name;
+    if (ln) streakCountByLeague.set(ln, (streakCountByLeague.get(ln) || 0) + 1);
   }
 
   async function applyTicket(ticket: SuggestedTicket) {
@@ -170,27 +186,97 @@ export default function StreaksPage() {
 
       {/* ─── Top Active Streaks ─── */}
       <section className="bg-warm-white px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
-        <div className="mb-6 flex items-center gap-3">
+        {/* Header row: title + count */}
+        <div className="mb-4 flex items-center gap-3">
           <TrendingUp className="h-5 w-5 text-oracle-gold" />
           <h2 className="font-display text-xl tracking-tight text-txt-primary sm:text-display-sm">
             Top Active Streaks
           </h2>
           <span className="rounded-full bg-warm-cream px-3 py-1 text-caption font-semibold text-txt-secondary">
-            {streaks.length} tracked
+            {selectedLeague ? `${filteredStreaks.length} in league` : `${streaks.length} tracked`}
           </span>
         </div>
 
+        {/* League filter bar */}
+        {!isLoading && leagues.length > 0 && (
+          <div className="mb-6 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
+            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+              {/* "All" pill */}
+              <button
+                onClick={() => setSelectedLeague(null)}
+                className={cn(
+                  'flex flex-shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-caption font-semibold transition-all duration-150',
+                  !selectedLeague
+                    ? 'border-oracle-gold bg-oracle-gold/15 text-oracle-gold-dark'
+                    : 'border-warm-sand bg-white text-txt-secondary hover:border-warm-stone hover:bg-warm-cream',
+                )}
+              >
+                All
+                <span className={cn(
+                  'rounded-full px-1.5 py-0.5 text-[10px] font-bold leading-none',
+                  !selectedLeague ? 'bg-oracle-gold/20 text-oracle-gold-dark' : 'bg-warm-cream text-txt-tertiary',
+                )}>
+                  {streaks.length}
+                </span>
+              </button>
+
+              {leagues.map((league) => {
+                const count = streakCountByLeague.get(league.name) || 0;
+                const isActive = selectedLeague === league.name;
+                return (
+                  <button
+                    key={league.id}
+                    onClick={() => setSelectedLeague(isActive ? null : league.name)}
+                    className={cn(
+                      'flex flex-shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-caption font-semibold transition-all duration-150',
+                      isActive
+                        ? 'border-oracle-gold bg-oracle-gold/15 text-oracle-gold-dark'
+                        : count > 0
+                          ? 'border-warm-sand bg-white text-txt-secondary hover:border-warm-stone hover:bg-warm-cream'
+                          : 'border-warm-sand/60 bg-warm-cream/40 text-txt-tertiary hover:border-warm-stone hover:bg-warm-cream',
+                    )}
+                  >
+                    {league.logoUrl && (
+                      <img src={league.logoUrl} alt="" className="h-4 w-4 object-contain" />
+                    )}
+                    <span className="max-w-[120px] truncate">{league.name}</span>
+                    <span className={cn(
+                      'rounded-full px-1.5 py-0.5 text-[10px] font-bold leading-none',
+                      isActive ? 'bg-oracle-gold/20 text-oracle-gold-dark' :
+                      count > 0 ? 'bg-warm-cream text-txt-tertiary' : 'bg-warm-sand/40 text-txt-tertiary',
+                    )}>
+                      {count}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Streak list */}
         {isLoading ? (
           <div className="space-y-3">
             {[1, 2, 3, 4, 5].map((i) => (
               <div key={i} className="h-16 animate-pulse rounded-oracle-md bg-warm-cream" />
             ))}
           </div>
-        ) : streaks.length > 0 ? (
+        ) : filteredStreaks.length > 0 ? (
           <div className="space-y-2">
-            {streaks.map((streak, idx) => (
+            {filteredStreaks.map((streak, idx) => (
               <StreakRow key={streak.id} streak={streak} rank={idx + 1} />
             ))}
+          </div>
+        ) : selectedLeague ? (
+          <div className="rounded-oracle-lg border-2 border-dashed border-warm-stone bg-warm-cream/30 py-12 text-center">
+            <Target className="mx-auto mb-4 h-10 w-10 text-warm-taupe" />
+            <p className="text-body font-medium text-txt-secondary">
+              No active streaks for {selectedLeague}
+            </p>
+            <p className="mt-2 text-body-sm text-txt-tertiary">
+              The streak engine hasn&apos;t detected any qualifying patterns for this league yet.
+              Check back after more matches are played.
+            </p>
           </div>
         ) : (
           <div className="rounded-oracle-lg border-2 border-dashed border-warm-stone py-12 text-center">
