@@ -48,6 +48,7 @@ export interface League {
   country?: string;
   logoUrl?: string;
   eventCount?: number;
+  streakCount?: number;
 }
 
 export interface Event {

@@ -12,6 +12,7 @@ import {
   Sparkles,
   Shield,
   X,
+  Search,
 } from 'lucide-react';
 import { cn, formatProbability, getProbabilityTier } from '@/lib/utils';
 import { useBuilderStore } from '@/stores/builder.store';
@@ -27,6 +28,7 @@ export default function StreaksPage() {
   const [filteredStreaks, setFilteredStreaks] = useState<ScoredStreak[]>([]);
   const [isFilterLoading, setIsFilterLoading] = useState(false);
   const [openLetter, setOpenLetter] = useState<string | null>(null);
+  const [modalSearch, setModalSearch] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [applyingTicketId, setApplyingTicketId] = useState<string | null>(null);
   const [appliedTicketId, setAppliedTicketId] = useState<string | null>(null);
@@ -74,12 +76,12 @@ export default function StreaksPage() {
     setIsFilterLoading(false);
   }
 
-  // Streak counts per league from the diagnostics-style data in leagues response
-  // We use the global streaks to estimate counts for the badge dots
+  // Real streak counts per league from the backend (not derived from loaded 30)
   const streakCountByLeague = new Map<string, number>();
-  for (const s of streaks) {
-    const ln = s.leagueName || s.team?.league?.name;
-    if (ln) streakCountByLeague.set(ln, (streakCountByLeague.get(ln) || 0) + 1);
+  for (const l of leagues) {
+    if (l.streakCount && l.streakCount > 0) {
+      streakCountByLeague.set(l.name, (streakCountByLeague.get(l.name) || 0) + l.streakCount);
+    }
   }
 
   // Group leagues by first letter for the A-Z grid
@@ -300,8 +302,17 @@ export default function StreaksPage() {
         )}
 
         {/* Letter modal */}
-        {openLetter && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setOpenLetter(null)}>
+        {openLetter && (() => {
+          const letterLeagueList = leaguesByLetter.get(openLetter) || [];
+          const searchFiltered = modalSearch
+            ? letterLeagueList.filter((l) =>
+                l.name.toLowerCase().includes(modalSearch.toLowerCase()) ||
+                (l.country && l.country.toLowerCase().includes(modalSearch.toLowerCase()))
+              )
+            : letterLeagueList;
+
+          return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => { setOpenLetter(null); setModalSearch(''); }}>
             <div
               className="w-full max-w-md rounded-oracle-lg bg-white shadow-xl"
               onClick={(e) => e.stopPropagation()}
@@ -317,22 +328,46 @@ export default function StreaksPage() {
                       Leagues
                     </h3>
                     <p className="text-caption text-txt-tertiary">
-                      {(leaguesByLetter.get(openLetter) || []).length} league{(leaguesByLetter.get(openLetter) || []).length !== 1 ? 's' : ''}
+                      {letterLeagueList.length} league{letterLeagueList.length !== 1 ? 's' : ''}
                     </p>
                   </div>
                 </div>
                 <button
-                  onClick={() => setOpenLetter(null)}
+                  onClick={() => { setOpenLetter(null); setModalSearch(''); }}
                   className="rounded-oracle-sm p-1.5 text-txt-tertiary transition-colors hover:bg-warm-cream hover:text-txt-primary"
                 >
                   <X className="h-5 w-5" />
                 </button>
               </div>
 
+              {/* Search bar */}
+              <div className="border-b border-warm-sand px-4 py-3">
+                <div className="flex items-center gap-2 rounded-oracle-md bg-warm-cream px-3 py-2">
+                  <Search className="h-4 w-4 flex-shrink-0 text-txt-tertiary" />
+                  <input
+                    type="text"
+                    value={modalSearch}
+                    onChange={(e) => setModalSearch(e.target.value)}
+                    placeholder="Search leagues..."
+                    className="w-full bg-transparent text-body-sm text-txt-primary placeholder:text-txt-tertiary outline-none"
+                    autoFocus
+                  />
+                  {modalSearch && (
+                    <button onClick={() => setModalSearch('')} className="text-txt-tertiary hover:text-txt-primary">
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
+              </div>
+
               {/* League list */}
-              <div className="max-h-80 overflow-y-auto p-2">
-                {(leaguesByLetter.get(openLetter) || []).map((league) => {
-                  const count = streakCountByLeague.get(league.name) || 0;
+              <div className="max-h-72 overflow-y-auto p-2">
+                {searchFiltered.length === 0 ? (
+                  <p className="px-3 py-6 text-center text-body-sm text-txt-tertiary">
+                    No leagues match &ldquo;{modalSearch}&rdquo;
+                  </p>
+                ) : searchFiltered.map((league) => {
+                  const count = league.streakCount || 0;
                   const isSelected = selectedLeague === league.name;
                   return (
                     <button
@@ -340,6 +375,7 @@ export default function StreaksPage() {
                       onClick={() => {
                         setSelectedLeague(isSelected ? null : league.name);
                         setOpenLetter(null);
+                        setModalSearch('');
                       }}
                       className={cn(
                         'flex w-full items-center gap-3 rounded-oracle-md px-3 py-2.5 text-left transition-all duration-150',
@@ -380,7 +416,8 @@ export default function StreaksPage() {
               </div>
             </div>
           </div>
-        )}
+          );
+        })()}
 
         {/* Streak list */}
         {isLoading || isFilterLoading ? (
