@@ -24,6 +24,8 @@ export default function StreaksPage() {
   const [stats, setStats] = useState<StreakStats | null>(null);
   const [leagues, setLeagues] = useState<League[]>([]);
   const [selectedLeague, setSelectedLeague] = useState<string | null>(null);
+  const [filteredStreaks, setFilteredStreaks] = useState<ScoredStreak[]>([]);
+  const [isFilterLoading, setIsFilterLoading] = useState(false);
   const [openLetter, setOpenLetter] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [applyingTicketId, setApplyingTicketId] = useState<string | null>(null);
@@ -32,6 +34,11 @@ export default function StreaksPage() {
   useEffect(() => {
     loadData();
   }, []);
+
+  // When league selection changes, fetch from backend
+  useEffect(() => {
+    if (!isLoading) loadStreaksForLeague(selectedLeague);
+  }, [selectedLeague]);
 
   async function loadData() {
     setIsLoading(true);
@@ -43,6 +50,7 @@ export default function StreaksPage() {
         api.get<{ leagues: League[]; total: number }>('/streaks/leagues'),
       ]);
       setStreaks(streaksRes.streaks || []);
+      setFilteredStreaks(streaksRes.streaks || []);
       setTickets(ticketsRes.tickets || []);
       setStats(statsRes);
       setLeagues(leaguesRes.leagues || []);
@@ -52,12 +60,22 @@ export default function StreaksPage() {
     setIsLoading(false);
   }
 
-  // Client-side filter — instant, no API calls
-  const filteredStreaks = selectedLeague
-    ? streaks.filter((s) => s.leagueName === selectedLeague || s.team?.league?.name === selectedLeague)
-    : streaks;
+  async function loadStreaksForLeague(league: string | null) {
+    setIsFilterLoading(true);
+    try {
+      const query = league
+        ? `/streaks?limit=30&league=${encodeURIComponent(league)}`
+        : '/streaks?limit=30';
+      const res = await api.get<{ streaks: ScoredStreak[]; total: number }>(query);
+      setFilteredStreaks(res.streaks || []);
+    } catch {
+      setFilteredStreaks([]);
+    }
+    setIsFilterLoading(false);
+  }
 
-  // Count streaks per league (from already-loaded data)
+  // Streak counts per league from the diagnostics-style data in leagues response
+  // We use the global streaks to estimate counts for the badge dots
   const streakCountByLeague = new Map<string, number>();
   for (const s of streaks) {
     const ln = s.leagueName || s.team?.league?.name;
@@ -365,7 +383,7 @@ export default function StreaksPage() {
         )}
 
         {/* Streak list */}
-        {isLoading ? (
+        {isLoading || isFilterLoading ? (
           <div className="space-y-3">
             {[1, 2, 3, 4, 5].map((i) => (
               <div key={i} className="h-16 animate-pulse rounded-oracle-md bg-warm-cream" />
