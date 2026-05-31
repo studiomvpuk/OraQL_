@@ -168,73 +168,15 @@ export default function BuilderPage() {
               ))}
             </div>
           ) : (
-            <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 scrollbar-hide">
+            <div className="space-y-3">
               {suggestedTickets.map((ticket) => (
-                <div
+                <BuilderTicketCard
                   key={ticket.id}
-                  className="w-72 flex-shrink-0 snap-start rounded-oracle-md border border-warm-sand bg-white p-4 shadow-soft transition-all hover:shadow-card sm:w-80"
-                >
-                  {/* Ticket header */}
-                  <div className="mb-3 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="rounded-full bg-oracle-gold/15 px-2 py-0.5 text-[10px] font-bold text-oracle-gold-dark">
-                        {ticket.legs.length}-LEG
-                      </span>
-                      <span className="text-caption text-txt-tertiary">
-                        {new Set(ticket.legs.map((l) => l.leagueName)).size} leagues
-                      </span>
-                    </div>
-                    <span className="font-mono text-body-sm font-bold text-prob-high">
-                      {formatProbability(ticket.combinedProbability)}
-                    </span>
-                  </div>
-
-                  {/* Legs preview */}
-                  <div className="mb-3 space-y-1.5">
-                    {ticket.legs.slice(0, 4).map((leg, i) => (
-                      <div key={`${leg.eventId}-${i}`} className="flex items-center gap-2 text-caption">
-                        <Flame className="h-3 w-3 flex-shrink-0 text-oracle-gold/60" />
-                        <span className="truncate text-txt-primary font-medium">
-                          {leg.teamName.length > 12 ? leg.teamName.substring(0, 12) : leg.teamName}
-                        </span>
-                        <span className="text-txt-tertiary">
-                          {shortLabel(leg.marketName, leg.line)}
-                        </span>
-                      </div>
-                    ))}
-                    {ticket.legs.length > 4 && (
-                      <p className="text-caption text-txt-tertiary pl-5">+{ticket.legs.length - 4} more</p>
-                    )}
-                  </div>
-
-                  {/* Apply button */}
-                  <button
-                    onClick={() => applyTicket(ticket)}
-                    disabled={applyingId === ticket.id || appliedId === ticket.id}
-                    className={cn(
-                      'flex w-full items-center justify-center gap-1.5 rounded-oracle-sm px-3 py-2 text-body-sm font-semibold transition-all',
-                      appliedId === ticket.id
-                        ? 'bg-prob-high/15 text-prob-high'
-                        : applyingId === ticket.id
-                          ? 'bg-warm-cream text-txt-tertiary'
-                          : 'bg-dark-ink text-txt-inverse hover:bg-dark-charcoal',
-                    )}
-                  >
-                    {appliedId === ticket.id ? (
-                      <>
-                        <Trophy className="h-3.5 w-3.5" />
-                        Applied!
-                      </>
-                    ) : applyingId === ticket.id ? (
-                      'Applying...'
-                    ) : (
-                      <>
-                        <Plus className="h-3.5 w-3.5" />
-                        Apply to Builder
-                      </>
-                    )}
-                  </button>
-                </div>
+                  ticket={ticket}
+                  onApply={() => applyTicket(ticket)}
+                  isApplying={applyingId === ticket.id}
+                  isApplied={appliedId === ticket.id}
+                />
               ))}
             </div>
           )}
@@ -269,12 +211,22 @@ export default function BuilderPage() {
                     {s.market.event.homeTeam.shortName || s.market.event.homeTeam.name} vs{' '}
                     {s.market.event.awayTeam.shortName || s.market.event.awayTeam.name}
                   </p>
-                  <p className="mt-1 text-body-sm text-txt-secondary">
-                    {s.market.name}
-                    <span className="mx-2 text-warm-stone">·</span>
-                    <span className="break-words">{s.market.event.league.name}</span>
-                    <span className="mx-2 text-warm-stone">·</span>
+                  <p className="mt-1 text-body-sm font-medium text-txt-primary">
+                    {formatMarketName(s.market.name)}{s.market.line != null ? ` ${s.market.line}` : ''}
+                    {s.market.streakSummary && (
+                      <span className="ml-2 rounded-full bg-prob-high/15 px-2 py-0.5 text-[10px] font-bold text-prob-high">STREAK</span>
+                    )}
+                  </p>
+                  <p className="mt-0.5 text-caption text-txt-tertiary">
+                    {s.market.event.league.name}
+                    <span className="mx-1.5 text-warm-stone">·</span>
                     {formatKickoff(s.market.event.kickoffAt)}
+                    {s.market.streakSummary && (
+                      <>
+                        <span className="mx-1.5 text-warm-stone">·</span>
+                        <span className="text-prob-high">{s.market.streakSummary}</span>
+                      </>
+                    )}
                   </p>
                 </div>
 
@@ -318,20 +270,130 @@ export default function BuilderPage() {
   );
 }
 
-function shortLabel(marketName: string, line: number | null): string {
+/* ─── Expandable Ticket Card ─── */
+function BuilderTicketCard({
+  ticket,
+  onApply,
+  isApplying,
+  isApplied,
+}: {
+  ticket: SuggestedTicket;
+  onApply: () => void;
+  isApplying: boolean;
+  isApplied: boolean;
+}) {
+  const [expanded, setExpanded] = useState(false);
+
+  return (
+    <div className="overflow-hidden rounded-oracle-md border border-warm-sand bg-white shadow-soft">
+      {/* Header — always visible, clickable to expand */}
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-warm-cream/50"
+      >
+        <span className="rounded-full bg-oracle-gold/15 px-2.5 py-0.5 text-[10px] font-bold text-oracle-gold-dark">
+          {ticket.legs.length}-LEG
+        </span>
+        <span className="text-caption text-txt-tertiary">
+          {new Set(ticket.legs.map((l) => l.leagueName)).size} leagues
+        </span>
+        <span className="flex-1" />
+        <span className="font-mono text-body-sm font-bold text-prob-high">
+          {formatProbability(ticket.combinedProbability)} combined
+        </span>
+        <ArrowRight className={cn(
+          'h-4 w-4 text-txt-tertiary transition-transform duration-200',
+          expanded && 'rotate-90',
+        )} />
+      </button>
+
+      {/* Expanded legs detail */}
+      {expanded && (
+        <div className="border-t border-warm-sand bg-warm-cream/20 px-4 py-3 space-y-2.5">
+          {ticket.legs.map((leg, i) => (
+            <div key={`${leg.eventId}-${i}`} className="rounded-oracle-sm bg-white p-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <p className="font-display text-body-sm font-semibold text-txt-primary">
+                    {leg.teamName} vs {leg.opponent}
+                  </p>
+                  <p className="mt-1 text-body-sm font-medium text-txt-primary">
+                    {formatMarketName(leg.marketName)}{leg.line != null ? ` ${leg.line}` : ''}
+                  </p>
+                  <p className="mt-0.5 text-caption text-txt-tertiary">
+                    {leg.leagueName}
+                    <span className="mx-1.5 text-warm-stone">·</span>
+                    {formatKickoff(leg.kickoffAt)}
+                  </p>
+                  {leg.streakSummary && (
+                    <p className="mt-1 flex items-center gap-1 text-caption text-prob-high">
+                      <Flame className="h-3 w-3" />
+                      {leg.streakSummary}
+                    </p>
+                  )}
+                </div>
+                <span className={cn(
+                  'flex-shrink-0 rounded-full px-2.5 py-1 font-mono text-body-sm font-bold',
+                  getProbabilityTier(leg.confidence) === 'high' ? 'bg-prob-high/15 text-prob-high' :
+                  getProbabilityTier(leg.confidence) === 'mid' ? 'bg-prob-mid/15 text-prob-mid' : 'bg-warm-cream text-txt-secondary',
+                )}>
+                  {formatProbability(leg.confidence)}
+                </span>
+              </div>
+            </div>
+          ))}
+
+          {/* Quality info */}
+          <div className="flex items-center gap-3 text-caption text-txt-tertiary pt-1">
+            <span>{formatProbability(ticket.averageConfidence)} avg confidence</span>
+            <span className="text-warm-stone">·</span>
+            <span>Quality: {(ticket.qualityScore * 100).toFixed(0)}</span>
+          </div>
+        </div>
+      )}
+
+      {/* Apply button — always visible at bottom */}
+      <div className="border-t border-warm-sand px-4 py-3">
+        <button
+          onClick={onApply}
+          disabled={isApplying || isApplied}
+          className={cn(
+            'flex w-full items-center justify-center gap-1.5 rounded-oracle-sm px-3 py-2.5 text-body-sm font-semibold transition-all',
+            isApplied
+              ? 'bg-prob-high/15 text-prob-high'
+              : isApplying
+                ? 'bg-warm-cream text-txt-tertiary'
+                : 'bg-dark-ink text-txt-inverse hover:bg-dark-charcoal',
+          )}
+        >
+          {isApplied ? (
+            <><Trophy className="h-3.5 w-3.5" /> Applied!</>
+          ) : isApplying ? (
+            'Applying...'
+          ) : (
+            <><Plus className="h-3.5 w-3.5" /> Apply to Builder</>
+          )}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Helpers ─── */
+function formatMarketName(name: string): string {
   const labels: Record<string, string> = {
-    GOALS_OVER: `O${line}G`,
-    GOALS_UNDER: `U${line}G`,
-    TEAM_GOALS_OVER: `TO${line}G`,
-    TEAM_GOALS_UNDER: `TU${line}G`,
-    CORNERS_OVER: `O${line}C`,
-    CORNERS_UNDER: `U${line}C`,
-    CARDS_OVER: `O${line}Cd`,
-    CARDS_UNDER: `U${line}Cd`,
-    BTTS_YES: 'BTTS',
-    BTTS_NO: 'NoBTTS',
-    CLEAN_SHEET: 'CS',
-    MATCH_RESULT_HOME: 'Win',
+    GOALS_OVER: 'Goals Over',
+    GOALS_UNDER: 'Goals Under',
+    TEAM_GOALS_OVER: 'Team Goals Over',
+    TEAM_GOALS_UNDER: 'Team Goals Under',
+    CORNERS_OVER: 'Corners Over',
+    CORNERS_UNDER: 'Corners Under',
+    CARDS_OVER: 'Cards Over',
+    CARDS_UNDER: 'Cards Under',
+    BTTS_YES: 'Both Teams to Score',
+    BTTS_NO: 'No BTTS',
+    CLEAN_SHEET: 'Clean Sheet',
+    MATCH_RESULT_HOME: 'Home Win',
   };
-  return labels[marketName] || marketName;
+  return labels[name] || name.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
 }
