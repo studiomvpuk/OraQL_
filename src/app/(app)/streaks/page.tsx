@@ -1,8 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import {
   Flame,
+  BookOpen,
   Zap,
   TrendingUp,
   Trophy,
@@ -131,7 +133,7 @@ export default function StreaksPage() {
             <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-oracle-md bg-oracle-gold/20 sm:h-12 sm:w-12">
               <Flame className="h-5 w-5 text-oracle-gold sm:h-6 sm:w-6" />
             </div>
-            <div>
+            <div className="flex-1">
               <h1 className="font-display text-2xl tracking-tight text-txt-inverse sm:text-display-md">
                 Streak Engine
               </h1>
@@ -139,6 +141,13 @@ export default function StreaksPage() {
                 Repeating market patterns detected across thousands of matches
               </p>
             </div>
+            <Link
+              href="/streaks/guide"
+              className="flex items-center gap-1.5 rounded-oracle-md border border-white/20 bg-white/10 px-3 py-2 text-caption font-semibold text-txt-inverse transition-colors hover:bg-white/20"
+            >
+              <BookOpen className="h-4 w-4" />
+              <span className="hidden sm:inline">Guide</span>
+            </Link>
           </div>
 
           {/* Stats Cards */}
