@@ -916,8 +916,58 @@ function MarketsTab({
     byCat.get(cat)!.push(g);
   });
 
+  // Merge real markets + streak suggestions into a unified list
+  const allMarkets = filteredMarkets.length > 0 ? filteredMarkets : (streakSuggestions || []).map((s) => ({
+    id: `streak-${s.streakId}-${s.marketName}-${s.line}`,
+    eventId: '',
+    category: (s.marketName.includes('CORNER') ? 'CORNERS' : s.marketName.includes('CARD') ? 'CARDS' : 'GOALS') as MarketCategory,
+    name: s.marketName,
+    shortName: formatStreakMarketName(s.marketName),
+    line: s.line ?? null,
+    probability: s.confidence,
+    confidence: s.confidence,
+    isValueBet: false,
+    isActive: true,
+    streakSummary: s.summary,
+  } as Market));
+
+  // Group into Over/Under tables by market type
+  type TableRow = { line: number | null; over?: Market & { streak?: StreakSuggestion }; under?: Market & { streak?: StreakSuggestion } };
+  type MarketTable = { title: string; rows: TableRow[]; standalones: (Market & { streak?: StreakSuggestion })[] };
+  const tables = new Map<string, MarketTable>();
+
+  for (const m of allMarkets) {
+    const isOver = m.name.includes('OVER');
+    const isUnder = m.name.includes('UNDER');
+    const streak = streakByMarket.get(`${m.name}:${m.line ?? ''}`);
+    const mWithStreak = { ...m, streak } as Market & { streak?: StreakSuggestion };
+
+    if (isOver || isUnder) {
+      const baseName = m.name.replace(/_OVER|_UNDER/, '');
+      const title = baseName === 'GOALS' ? 'Goals Over/Under'
+        : baseName === 'TEAM_GOALS' ? 'Team Goals Over/Under'
+        : baseName === 'CORNERS' ? 'Corners Over/Under'
+        : baseName === 'CARDS' ? 'Cards Over/Under'
+        : baseName.replace(/_/g, ' ');
+
+      if (!tables.has(baseName)) tables.set(baseName, { title, rows: [], standalones: [] });
+      const table = tables.get(baseName)!;
+      let row = table.rows.find((r) => r.line === m.line);
+      if (!row) { row = { line: m.line }; table.rows.push(row); }
+      if (isOver) row.over = mWithStreak;
+      if (isUnder) row.under = mWithStreak;
+    } else {
+      const title = 'Other Markets';
+      if (!tables.has('OTHER')) tables.set('OTHER', { title, rows: [], standalones: [] });
+      tables.get('OTHER')!.standalones.push(mWithStreak);
+    }
+  }
+
+  // Sort rows by line within each table
+  for (const t of tables.values()) t.rows.sort((a, b) => (a.line ?? 0) - (b.line ?? 0));
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* Category filter pills */}
       <div className="flex flex-wrap gap-2">
         <button
@@ -947,169 +997,95 @@ function MarketsTab({
         ))}
       </div>
 
-      {/* Markets grouped by category */}
-      {filteredMarkets.length === 0 && streakSuggestions.length > 0 ? (
-        (() => {
-          // Group streak suggestions into Over/Under pairs like real markets
-          const streakGroups = new Map<string, { over?: StreakSuggestion; under?: StreakSuggestion; standalone?: StreakSuggestion; line?: number }>();
-          for (const s of streakSuggestions) {
-            const isOver = s.marketName.includes('OVER');
-            const isUnder = s.marketName.includes('UNDER');
-            const baseName = s.marketName.replace('_OVER', '').replace('_UNDER', '');
-            const key = `${baseName}:${s.line ?? 'none'}`;
-
-            if (isOver || isUnder) {
-              const existing = streakGroups.get(key) || { line: s.line ?? undefined };
-              if (isOver) existing.over = s;
-              else existing.under = s;
-              streakGroups.set(key, existing);
-            } else {
-              streakGroups.set(`standalone:${s.marketName}:${s.line}`, { standalone: s });
-            }
-          }
-
-          return (
-            <div className="space-y-3">
-              {Array.from(streakGroups.entries()).map(([key, group]) => {
-                if (group.standalone) {
-                  const s = group.standalone;
-                  return (
-                    <div key={key} className="flex w-full items-center gap-3 rounded-oracle-md border border-warm-sand bg-white px-4 py-3">
-                      <span className="flex-1 truncate text-body-sm font-medium text-txt-primary">
-                        {formatStreakMarketName(s.marketName)}
-                        {s.line != null && <span className="ml-1 font-mono text-txt-secondary">{s.line}</span>}
-                      </span>
-                      <span className="flex items-center gap-1 rounded-full bg-prob-high/15 px-2 py-0.5 text-[10px] font-bold text-prob-high">
-                        <Flame className="h-2.5 w-2.5" /> STREAK
-                      </span>
-                      <span className={cn(
-                        'font-mono text-body-sm font-semibold',
-                        getProbabilityTier(s.confidence) === 'high' ? 'text-prob-high' :
-                        getProbabilityTier(s.confidence) === 'mid' ? 'text-prob-mid' : 'text-txt-tertiary',
-                      )}>
-                        {formatProbability(s.confidence)}
-                      </span>
-                    </div>
-                  );
-                }
-
-                return (
-                  <div key={key} className="space-y-2">
-                    {group.line != null && (
-                      <p className="text-caption font-medium text-txt-secondary pl-1">Line {group.line}</p>
-                    )}
-                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                      {group.over && (
-                        <div className="flex w-full items-center gap-3 rounded-oracle-md border border-warm-sand bg-white px-4 py-3">
-                          <span className="flex-shrink-0 rounded px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide bg-prob-high/15 text-prob-high">OVER</span>
-                          <span className="flex-1 truncate text-body-sm font-medium text-txt-primary">
-                            {formatStreakMarketName(group.over.marketName)}
-                          </span>
-                          <span className="flex items-center gap-1 rounded-full bg-prob-high/15 px-2 py-0.5 text-[10px] font-bold text-prob-high">
-                            <Flame className="h-2.5 w-2.5" /> STREAK
-                          </span>
-                          <span className={cn(
-                            'font-mono text-body-sm font-semibold',
-                            getProbabilityTier(group.over.confidence) === 'high' ? 'text-prob-high' :
-                            getProbabilityTier(group.over.confidence) === 'mid' ? 'text-prob-mid' : 'text-txt-tertiary',
-                          )}>
-                            {formatProbability(group.over.confidence)}
-                          </span>
-                        </div>
-                      )}
-                      {group.under && (
-                        <div className="flex w-full items-center gap-3 rounded-oracle-md border border-warm-sand bg-white px-4 py-3">
-                          <span className="flex-shrink-0 rounded px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide bg-blue-100 text-blue-600">UNDER</span>
-                          <span className="flex-1 truncate text-body-sm font-medium text-txt-primary">
-                            {formatStreakMarketName(group.under.marketName)}
-                          </span>
-                          <span className="flex items-center gap-1 rounded-full bg-prob-high/15 px-2 py-0.5 text-[10px] font-bold text-prob-high">
-                            <Flame className="h-2.5 w-2.5" /> STREAK
-                          </span>
-                          <span className={cn(
-                            'font-mono text-body-sm font-semibold',
-                            getProbabilityTier(group.under.confidence) === 'high' ? 'text-prob-high' :
-                            getProbabilityTier(group.under.confidence) === 'mid' ? 'text-prob-mid' : 'text-txt-tertiary',
-                          )}>
-                            {formatProbability(group.under.confidence)}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          );
-        })()
-      ) : filteredMarkets.length === 0 ? (
+      {allMarkets.length === 0 ? (
         <div className="rounded-oracle-md bg-warm-white py-8 text-center">
-          <p className="text-body-sm text-txt-tertiary">No markets available for this category.</p>
+          <p className="text-body-sm text-txt-tertiary">No markets available for this event.</p>
         </div>
       ) : (
-        Array.from(byCat.entries()).map(([cat, groups]) => (
-          <div key={cat} className="space-y-3">
-            {/* Category header */}
-            <h3 className="text-body-xs font-mono uppercase tracking-widest text-txt-tertiary font-semibold">
-              {formatCategory(cat)}
-            </h3>
-
-            {/* Market rows */}
-            <div className="space-y-2">
-              {groups.map((group, gi) => {
-                if (group.standalone) {
-                  const m = group.standalone;
-                  const isSelected = selectedMarket?.id === m.id;
-                  const mStreak = streakByMarket.get(`${m.name}:${m.line ?? ''}`);
-                  return (
-                    <MarketRow
-                      key={m.id}
-                      market={m}
-                      isSelected={isSelected}
-                      onClick={() => setSelectedMarket(isSelected ? null : m)}
-                      streak={mStreak}
-                    />
-                  );
-                }
-
-                // Over/Under pair — side by side
-                return (
-                  <div key={`pair-${gi}`} className="space-y-2">
-                    <p className="text-caption font-medium text-txt-secondary pl-1">
-                      Line {group.line}
-                    </p>
-                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                      {group.over && (
-                        <MarketRow
-                          market={group.over}
-                          isSelected={selectedMarket?.id === group.over.id}
-                          onClick={() =>
-                            setSelectedMarket(
-                              selectedMarket?.id === group.over!.id ? null : group.over!,
-                            )
-                          }
-                          direction="OVER"
-                          streak={streakByMarket.get(`${group.over.name}:${group.over.line ?? ''}`)}
-                        />
-                      )}
-                      {group.under && (
-                        <MarketRow
-                          market={group.under}
-                          isSelected={selectedMarket?.id === group.under.id}
-                          onClick={() =>
-                            setSelectedMarket(
-                              selectedMarket?.id === group.under!.id ? null : group.under!,
-                            )
-                          }
-                          direction="UNDER"
-                          streak={streakByMarket.get(`${group.under.name}:${group.under.line ?? ''}`)}
-                        />
-                      )}
-                    </div>
+        Array.from(tables.entries()).map(([key, table]) => (
+          <div key={key} className="overflow-hidden rounded-oracle-md border border-warm-sand">
+            {/* Table header */}
+            <div className="bg-dark-ink px-4 py-2.5">
+              <div className="flex items-center justify-between">
+                <span className="text-caption font-semibold uppercase tracking-widest text-txt-inverse-2">{table.title}</span>
+                {table.rows.length > 0 && (
+                  <div className="flex gap-8 text-caption font-semibold uppercase tracking-widest text-txt-inverse-2">
+                    <span className="w-20 text-center">Over</span>
+                    <span className="w-20 text-center">Under</span>
                   </div>
-                );
-              })}
+                )}
+              </div>
             </div>
+
+            {/* Over/Under rows */}
+            {table.rows.map((row, ri) => (
+              <div key={ri} className={cn('flex items-center border-b border-warm-sand/50 last:border-0', ri % 2 === 0 ? 'bg-white' : 'bg-warm-cream/30')}>
+                {/* Line label */}
+                <div className="w-20 flex-shrink-0 px-4 py-3">
+                  <span className="font-mono text-body-sm font-bold text-txt-primary">{row.line}</span>
+                </div>
+
+                <div className="flex flex-1 items-center justify-end gap-2 px-2 py-2">
+                  {/* Over cell */}
+                  {row.over ? (
+                    <button
+                      onClick={() => setSelectedMarket(selectedMarket?.id === row.over!.id ? null : row.over!)}
+                      className={cn(
+                        'flex w-20 flex-shrink-0 flex-col items-center justify-center rounded-md px-2 py-2.5 font-mono text-body-sm font-bold transition-all',
+                        row.over.probability > 0.5
+                          ? 'bg-prob-high/20 text-prob-high hover:bg-prob-high/30'
+                          : 'bg-warm-cream text-txt-tertiary hover:bg-warm-sand',
+                        selectedMarket?.id === row.over.id && 'ring-2 ring-oracle-gold',
+                      )}
+                    >
+                      {(row.over.probability * 100).toFixed(0)}%
+                      {row.over.streak && <Flame className="mt-0.5 h-3 w-3 text-prob-high" />}
+                    </button>
+                  ) : <div className="w-20 flex-shrink-0" />}
+
+                  {/* Under cell */}
+                  {row.under ? (
+                    <button
+                      onClick={() => setSelectedMarket(selectedMarket?.id === row.under!.id ? null : row.under!)}
+                      className={cn(
+                        'flex w-20 flex-shrink-0 flex-col items-center justify-center rounded-md px-2 py-2.5 font-mono text-body-sm font-bold transition-all',
+                        row.under.probability > 0.5
+                          ? 'bg-prob-high/20 text-prob-high hover:bg-prob-high/30'
+                          : 'bg-warm-cream text-txt-tertiary hover:bg-warm-sand',
+                        selectedMarket?.id === row.under.id && 'ring-2 ring-oracle-gold',
+                      )}
+                    >
+                      {(row.under.probability * 100).toFixed(0)}%
+                      {row.under.streak && <Flame className="mt-0.5 h-3 w-3 text-prob-high" />}
+                    </button>
+                  ) : <div className="w-20 flex-shrink-0" />}
+                </div>
+              </div>
+            ))}
+
+            {/* Standalone markets (BTTS, Clean Sheet, etc.) */}
+            {table.standalones.map((m) => (
+              <div key={m.id} className="flex items-center border-b border-warm-sand/50 last:border-0 bg-white">
+                <div className="flex-1 px-4 py-3">
+                  <span className="text-body-sm font-medium text-txt-primary">{m.shortName || formatStreakMarketName(m.name)}</span>
+                </div>
+                <div className="px-4 py-2">
+                  <button
+                    onClick={() => setSelectedMarket(selectedMarket?.id === m.id ? null : m)}
+                    className={cn(
+                      'rounded-md px-4 py-2.5 font-mono text-body-sm font-bold transition-all',
+                      m.probability > 0.5
+                        ? 'bg-prob-high/20 text-prob-high hover:bg-prob-high/30'
+                        : 'bg-warm-cream text-txt-tertiary hover:bg-warm-sand',
+                      selectedMarket?.id === m.id && 'ring-2 ring-oracle-gold',
+                    )}
+                  >
+                    {(m.probability * 100).toFixed(0)}%
+                    {m.streak && <Flame className="ml-1 inline h-3 w-3 text-prob-high" />}
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
         ))
       )}

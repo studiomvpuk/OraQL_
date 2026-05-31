@@ -194,7 +194,7 @@ export default function StreaksPage() {
       </section>
 
       {/* ─── Suggested Tickets ─── */}
-      <section className="bg-warm-cream px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
+      <section className="overflow-hidden bg-warm-cream px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
         <div className="mb-6 flex items-center gap-3">
           <Sparkles className="h-5 w-5 text-oracle-gold" />
           <h2 className="font-display text-xl tracking-tight text-txt-primary sm:text-display-sm">
@@ -536,21 +536,19 @@ function TicketCard({
   isApplied: boolean;
 }) {
   return (
-    <div className="flex flex-col rounded-oracle-lg border border-warm-sand bg-white p-5 shadow-soft transition-all duration-200 hover:shadow-card">
+    <div className="flex min-w-0 flex-col overflow-hidden rounded-oracle-lg border border-warm-sand bg-white p-4 shadow-soft transition-all duration-200 hover:shadow-card sm:p-5">
       {/* Header */}
-      <div className="mb-4 flex items-start justify-between">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="rounded-full bg-oracle-gold/15 px-2.5 py-0.5 text-caption font-bold text-oracle-gold-dark">
-              {ticket.legs.length}-LEG
-            </span>
-            <span className="rounded-full bg-warm-cream px-2 py-0.5 text-caption font-medium text-txt-secondary">
-              {new Set(ticket.legs.map((l) => l.leagueName)).size} leagues
-            </span>
-          </div>
+      <div className="mb-3 flex items-start justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="rounded-full bg-oracle-gold/15 px-2.5 py-0.5 text-caption font-bold text-oracle-gold-dark">
+            {ticket.legs.length}-LEG
+          </span>
+          <span className="rounded-full bg-warm-cream px-2 py-0.5 text-caption font-medium text-txt-secondary">
+            {new Set(ticket.legs.map((l) => l.leagueName)).size} leagues
+          </span>
         </div>
-        <div className="text-right">
-          <p className="font-mono text-heading font-bold text-prob-high">
+        <div className="flex-shrink-0 text-right">
+          <p className="font-mono text-body font-bold text-prob-high sm:text-heading">
             {formatProbability(ticket.combinedProbability)}
           </p>
           <p className="text-caption text-txt-tertiary">combined</p>
@@ -558,11 +556,11 @@ function TicketCard({
       </div>
 
       {/* Legs */}
-      <div className="mb-4 flex-1 space-y-2">
+      <div className="mb-3 flex-1 space-y-1.5">
         {ticket.legs.map((leg, i) => (
           <div
             key={`${leg.eventId}-${leg.marketName}-${i}`}
-            className="flex items-center gap-3 rounded-oracle-sm bg-warm-cream/60 px-3 py-2"
+            className="flex items-center gap-2 overflow-hidden rounded-oracle-sm bg-warm-cream/60 px-3 py-2"
           >
             {leg.teamLogoUrl ? (
               <img src={leg.teamLogoUrl} alt="" className="h-5 w-5 flex-shrink-0 object-contain" />
@@ -585,7 +583,7 @@ function TicketCard({
               </p>
             </div>
             <span className={cn(
-              'font-mono text-caption font-semibold',
+              'flex-shrink-0 font-mono text-caption font-semibold',
               getProbabilityTier(leg.probability) === 'high' ? 'text-prob-high' :
               getProbabilityTier(leg.probability) === 'mid' ? 'text-prob-mid' : 'text-txt-tertiary',
             )}>
