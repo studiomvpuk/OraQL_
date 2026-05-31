@@ -331,6 +331,7 @@ export default function EventDetailPage() {
                 selectedMarket={selectedMarket}
                 setSelectedMarket={setSelectedMarket}
                 addToBuilder={addToBuilder}
+                streakSuggestions={streakSuggestions}
               />
             )}
 
@@ -844,6 +845,7 @@ function MarketsTab({
   selectedMarket,
   setSelectedMarket,
   addToBuilder,
+  streakSuggestions = [],
 }: {
   markets: Market[];
   categories: string[];
@@ -853,7 +855,16 @@ function MarketsTab({
   selectedMarket: Market | null;
   setSelectedMarket: (m: Market | null) => void;
   addToBuilder: (id: string) => Promise<void>;
+  streakSuggestions?: StreakSuggestion[];
 }) {
+  // Build a lookup of streak-backed markets for green badges
+  const streakByMarket = new Map<string, StreakSuggestion>();
+  for (const s of streakSuggestions) {
+    const key = `${s.marketName}:${s.line ?? ''}`;
+    if (!streakByMarket.has(key) || s.confidence > (streakByMarket.get(key)?.confidence ?? 0)) {
+      streakByMarket.set(key, s);
+    }
+  }
   /**
    * Group markets by category + line into paired Over/Under rows.
    */
@@ -937,7 +948,42 @@ function MarketsTab({
       </div>
 
       {/* Markets grouped by category */}
-      {filteredMarkets.length === 0 ? (
+      {filteredMarkets.length === 0 && streakSuggestions.length > 0 ? (
+        <div className="space-y-3">
+          <p className="text-caption text-txt-tertiary">
+            No computed markets yet. Showing {streakSuggestions.length} streak-backed patterns:
+          </p>
+          <div className="space-y-2">
+            {streakSuggestions.map((s) => (
+              <div
+                key={`${s.streakId}-${s.marketName}-${s.line}`}
+                className="group flex items-center gap-3 rounded-oracle-md border border-prob-high/30 bg-prob-high/5 px-4 py-3 transition-all hover:border-prob-high/50 hover:shadow-soft"
+              >
+                <div className="flex h-5 w-5 items-center justify-center rounded-full bg-prob-high/20">
+                  <Flame className="h-3 w-3 text-prob-high" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-body-sm font-medium text-txt-primary">
+                    {formatStreakMarketName(s.marketName)}
+                    {s.line != null && <span className="ml-1 font-mono text-txt-secondary">{s.line}</span>}
+                    <span className="ml-2 rounded-full bg-prob-high/15 px-2 py-0.5 text-[10px] font-bold uppercase text-prob-high">
+                      Streak
+                    </span>
+                  </p>
+                  <p className="mt-0.5 text-caption text-txt-tertiary">{s.summary}</p>
+                </div>
+                <span className={cn(
+                  'flex-shrink-0 rounded-full px-3 py-1 font-mono text-body-sm font-bold',
+                  getProbabilityTier(s.confidence) === 'high' ? 'bg-prob-high/15 text-prob-high' :
+                  getProbabilityTier(s.confidence) === 'mid' ? 'bg-prob-mid/15 text-prob-mid' : 'bg-warm-cream text-txt-secondary',
+                )}>
+                  {(s.confidence * 100).toFixed(0)}%
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : filteredMarkets.length === 0 ? (
         <div className="rounded-oracle-md bg-warm-white py-8 text-center">
           <p className="text-body-sm text-txt-tertiary">No markets available for this category.</p>
         </div>
@@ -955,12 +1001,14 @@ function MarketsTab({
                 if (group.standalone) {
                   const m = group.standalone;
                   const isSelected = selectedMarket?.id === m.id;
+                  const mStreak = streakByMarket.get(`${m.name}:${m.line ?? ''}`);
                   return (
                     <MarketRow
                       key={m.id}
                       market={m}
                       isSelected={isSelected}
                       onClick={() => setSelectedMarket(isSelected ? null : m)}
+                      streak={mStreak}
                     />
                   );
                 }
@@ -982,6 +1030,7 @@ function MarketsTab({
                             )
                           }
                           direction="OVER"
+                          streak={streakByMarket.get(`${group.over.name}:${group.over.line ?? ''}`)}
                         />
                       )}
                       {group.under && (
@@ -994,6 +1043,7 @@ function MarketsTab({
                             )
                           }
                           direction="UNDER"
+                          streak={streakByMarket.get(`${group.under.name}:${group.under.line ?? ''}`)}
                         />
                       )}
                     </div>
@@ -1014,11 +1064,13 @@ function MarketRow({
   isSelected,
   onClick,
   direction,
+  streak,
 }: {
   market: Market;
   isSelected: boolean;
   onClick: () => void;
   direction?: 'OVER' | 'UNDER';
+  streak?: StreakSuggestion;
 }) {
   const tier = getProbabilityTier(market.probability);
 
@@ -1029,7 +1081,9 @@ function MarketRow({
         'flex w-full items-center gap-3 rounded-oracle-md border px-4 py-3 text-left transition-all duration-200',
         isSelected
           ? 'border-oracle-gold bg-oracle-gold/[0.06] shadow-soft'
-          : 'border-warm-sand bg-white hover:border-warm-stone hover:shadow-soft',
+          : streak
+            ? 'border-prob-high/30 bg-prob-high/[0.03] hover:border-prob-high/50 hover:shadow-soft'
+            : 'border-warm-sand bg-white hover:border-warm-stone hover:shadow-soft',
       )}
     >
       {/* Direction badge */}
@@ -1050,6 +1104,20 @@ function MarketRow({
       <span className="flex-1 truncate text-body-sm font-medium text-txt-primary">
         {market.shortName || market.name}
       </span>
+
+      {/* Streak badge */}
+      {streak && (
+        <span className="group/streak relative flex-shrink-0">
+          <span className="flex items-center gap-1 rounded-full bg-prob-high/15 px-2 py-0.5 text-[10px] font-bold text-prob-high">
+            <Flame className="h-2.5 w-2.5" />
+            STREAK
+          </span>
+          <span className="pointer-events-none absolute bottom-full right-0 z-50 mb-2 w-56 rounded-oracle-sm bg-dark-ink px-3 py-2 text-[11px] leading-snug text-white opacity-0 shadow-lg transition-opacity duration-150 group-hover/streak:opacity-100">
+            {streak.summary}
+            <span className="absolute right-4 top-full border-4 border-transparent border-t-dark-ink" />
+          </span>
+        </span>
+      )}
 
       {/* Value badge */}
       {market.isValueBet && (
