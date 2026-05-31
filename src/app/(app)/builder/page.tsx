@@ -309,38 +309,9 @@ function BuilderTicketCard({
 
       {/* Expanded legs detail */}
       {expanded && (
-        <div className="border-t border-warm-sand bg-warm-cream/20 px-4 py-3 space-y-2.5">
+        <div className="border-t border-warm-sand bg-warm-cream/20 px-4 py-3 space-y-2">
           {ticket.legs.map((leg, i) => (
-            <div key={`${leg.eventId}-${i}`} className="rounded-oracle-sm bg-white p-3">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0 flex-1">
-                  <p className="font-display text-body-sm font-semibold text-txt-primary">
-                    {leg.teamName} vs {leg.opponent}
-                  </p>
-                  <p className="mt-1 text-body-sm font-medium text-txt-primary">
-                    {formatMarketName(leg.marketName)}{leg.line != null ? ` ${leg.line}` : ''}
-                  </p>
-                  <p className="mt-0.5 text-caption text-txt-tertiary">
-                    {leg.leagueName}{leg.leagueCountry ? ` (${leg.leagueCountry})` : ''}
-                    <span className="mx-1.5 text-warm-stone">·</span>
-                    {formatKickoff(leg.kickoffAt)}
-                  </p>
-                  {leg.streakSummary && (
-                    <p className="mt-1 flex items-center gap-1 text-caption text-prob-high">
-                      <Flame className="h-3 w-3" />
-                      {leg.streakSummary}
-                    </p>
-                  )}
-                </div>
-                <span className={cn(
-                  'flex-shrink-0 rounded-full px-2.5 py-1 font-mono text-body-sm font-bold',
-                  getProbabilityTier(leg.confidence) === 'high' ? 'bg-prob-high/15 text-prob-high' :
-                  getProbabilityTier(leg.confidence) === 'mid' ? 'bg-prob-mid/15 text-prob-mid' : 'bg-warm-cream text-txt-secondary',
-                )}>
-                  {formatProbability(leg.confidence)}
-                </span>
-              </div>
-            </div>
+            <BuilderExpandableLeg key={`${leg.eventId}-${i}`} leg={leg} />
           ))}
 
           {/* Quality info */}
@@ -375,6 +346,57 @@ function BuilderTicketCard({
           )}
         </button>
       </div>
+    </div>
+  );
+}
+
+/* ─── Expandable Leg ─── */
+function BuilderExpandableLeg({ leg }: { leg: import('@/types').TicketLeg }) {
+  const [open, setOpen] = useState(false);
+  const confTier = getProbabilityTier(leg.confidence);
+
+  return (
+    <div className="overflow-hidden rounded-oracle-sm bg-white">
+      <button
+        onClick={() => setOpen(!open)}
+        className="flex w-full items-center gap-2 px-3 py-2.5 text-left transition-colors hover:bg-warm-cream/50"
+      >
+        {leg.teamLogoUrl ? (
+          <img src={leg.teamLogoUrl} alt="" className="h-5 w-5 flex-shrink-0 object-contain" />
+        ) : (
+          <div className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-warm-stone text-[8px] font-bold text-txt-inverse">
+            {leg.teamName.charAt(0)}
+          </div>
+        )}
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-body-sm font-medium text-txt-primary">{leg.teamName}</p>
+          <p className="truncate text-caption text-txt-tertiary">
+            {leg.leagueName}{leg.leagueCountry ? ` (${leg.leagueCountry})` : ''}
+            <span className="mx-1 text-warm-stone">·</span>
+            {formatMarket(leg.marketName, leg.line)} vs {leg.opponent}
+          </p>
+        </div>
+        <span className={cn(
+          'flex-shrink-0 font-mono text-caption font-semibold',
+          confTier === 'high' ? 'text-prob-high' : confTier === 'mid' ? 'text-prob-mid' : 'text-txt-tertiary',
+        )}>
+          {formatProbability(leg.confidence)}
+        </span>
+        <ArrowRight className={cn('h-3.5 w-3.5 flex-shrink-0 text-txt-tertiary transition-transform', open && 'rotate-90')} />
+      </button>
+
+      {open && (
+        <div className="border-t border-warm-sand/50 bg-warm-cream/30 px-3 py-2.5 space-y-1.5">
+          <div className="flex gap-2"><span className="w-14 text-[10px] font-semibold uppercase tracking-widest text-txt-tertiary">Match</span><span className="text-body-sm text-txt-primary">{leg.teamName} vs {leg.opponent}</span></div>
+          <div className="flex gap-2"><span className="w-14 text-[10px] font-semibold uppercase tracking-widest text-txt-tertiary">Market</span><span className="text-body-sm text-txt-primary">{formatMarketName(leg.marketName)}{leg.line != null ? ` ${leg.line}` : ''}</span></div>
+          <div className="flex gap-2"><span className="w-14 text-[10px] font-semibold uppercase tracking-widest text-txt-tertiary">League</span><span className="text-body-sm text-txt-primary">{leg.leagueName}{leg.leagueCountry ? ` (${leg.leagueCountry})` : ''}</span></div>
+          <div className="flex gap-2"><span className="w-14 text-[10px] font-semibold uppercase tracking-widest text-txt-tertiary">Time</span><span className="text-body-sm text-txt-primary">{formatKickoff(leg.kickoffAt)}</span></div>
+          <div className="flex gap-2"><span className="w-14 text-[10px] font-semibold uppercase tracking-widest text-txt-tertiary">Conf.</span><span className={cn('font-mono text-body-sm font-bold', confTier === 'high' ? 'text-prob-high' : confTier === 'mid' ? 'text-prob-mid' : 'text-txt-tertiary')}>{(leg.confidence * 100).toFixed(0)}%</span></div>
+          {leg.streakSummary && (
+            <div className="flex items-start gap-2"><span className="w-14 flex-shrink-0 text-[10px] font-semibold uppercase tracking-widest text-txt-tertiary">Why</span><p className="flex items-center gap-1 text-caption text-prob-high"><Flame className="h-3 w-3 flex-shrink-0" />{leg.streakSummary}</p></div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

@@ -558,38 +558,7 @@ function TicketCard({
       {/* Legs */}
       <div className="mb-3 flex-1 space-y-1.5">
         {ticket.legs.map((leg, i) => (
-          <div
-            key={`${leg.eventId}-${leg.marketName}-${i}`}
-            className="flex items-center gap-2 overflow-hidden rounded-oracle-sm bg-warm-cream/60 px-3 py-2"
-          >
-            {leg.teamLogoUrl ? (
-              <img src={leg.teamLogoUrl} alt="" className="h-5 w-5 flex-shrink-0 object-contain" />
-            ) : (
-              <div className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-warm-stone text-[8px] font-bold text-txt-inverse">
-                {leg.teamName.charAt(0)}
-              </div>
-            )}
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-body-sm font-medium text-txt-primary">
-                {leg.teamName}
-              </p>
-              <p className="truncate text-caption text-txt-tertiary">
-                <span className="font-medium text-txt-secondary">{leg.leagueName}{leg.leagueCountry ? ` (${leg.leagueCountry})` : ''}</span>
-                <span className="mx-1 text-warm-stone">·</span>
-                <Tip text={marketGuide(leg.marketName, leg.line ?? null)}>
-                  <span className="cursor-help border-b border-dotted border-warm-stone/40">{shortMarketLabel(leg.marketName, leg.line)}</span>
-                </Tip>
-                {' '}vs {leg.opponent}
-              </p>
-            </div>
-            <span className={cn(
-              'flex-shrink-0 font-mono text-caption font-semibold',
-              getProbabilityTier(leg.probability) === 'high' ? 'text-prob-high' :
-              getProbabilityTier(leg.probability) === 'mid' ? 'text-prob-mid' : 'text-txt-tertiary',
-            )}>
-              {formatProbability(leg.probability)}
-            </span>
-          </div>
+          <ExpandableLeg key={`${leg.eventId}-${leg.marketName}-${i}`} leg={leg} />
         ))}
       </div>
 
@@ -828,6 +797,88 @@ function StreakRow({ streak, rank }: { streak: ScoredStreak; rank: number }) {
 }
 
 /* ─── Team Streak Group ─── */
+/* ─── Expandable Ticket Leg ─── */
+function ExpandableLeg({ leg }: { leg: import('@/types').TicketLeg }) {
+  const [open, setOpen] = useState(false);
+  const confTier = getProbabilityTier(leg.confidence);
+
+  return (
+    <div className="overflow-hidden rounded-oracle-sm bg-warm-cream/60">
+      {/* Summary row — always visible */}
+      <button
+        onClick={() => setOpen(!open)}
+        className="flex w-full items-center gap-2 px-3 py-2 text-left transition-colors hover:bg-warm-cream"
+      >
+        {leg.teamLogoUrl ? (
+          <img src={leg.teamLogoUrl} alt="" className="h-5 w-5 flex-shrink-0 object-contain" />
+        ) : (
+          <div className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-warm-stone text-[8px] font-bold text-txt-inverse">
+            {leg.teamName.charAt(0)}
+          </div>
+        )}
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-body-sm font-medium text-txt-primary">{leg.teamName}</p>
+          <p className="truncate text-caption text-txt-tertiary">
+            {leg.leagueName}{leg.leagueCountry ? ` (${leg.leagueCountry})` : ''}
+            <span className="mx-1 text-warm-stone">·</span>
+            {shortMarketLabel(leg.marketName, leg.line)} vs {leg.opponent}
+          </p>
+        </div>
+        <span className={cn(
+          'flex-shrink-0 font-mono text-caption font-semibold',
+          confTier === 'high' ? 'text-prob-high' : confTier === 'mid' ? 'text-prob-mid' : 'text-txt-tertiary',
+        )}>
+          {formatProbability(leg.confidence)}
+        </span>
+        <ChevronRight className={cn('h-3.5 w-3.5 flex-shrink-0 text-txt-tertiary transition-transform', open && 'rotate-90')} />
+      </button>
+
+      {/* Expanded details */}
+      {open && (
+        <div className="border-t border-warm-sand/50 bg-white px-3 py-2.5 space-y-2">
+          {/* Match */}
+          <div className="flex items-center gap-2">
+            <span className="w-14 text-[10px] font-semibold uppercase tracking-widest text-txt-tertiary">Match</span>
+            <span className="text-body-sm font-medium text-txt-primary">{leg.teamName} vs {leg.opponent}</span>
+          </div>
+          {/* Market */}
+          <div className="flex items-center gap-2">
+            <span className="w-14 text-[10px] font-semibold uppercase tracking-widest text-txt-tertiary">Market</span>
+            <span className="text-body-sm text-txt-primary">{formatMarketName(leg.marketName)}{leg.line != null ? ` ${leg.line}` : ''}</span>
+          </div>
+          {/* League */}
+          <div className="flex items-center gap-2">
+            <span className="w-14 text-[10px] font-semibold uppercase tracking-widest text-txt-tertiary">League</span>
+            <span className="text-body-sm text-txt-primary">{leg.leagueName}{leg.leagueCountry ? ` (${leg.leagueCountry})` : ''}</span>
+          </div>
+          {/* Confidence */}
+          <div className="flex items-center gap-2">
+            <span className="w-14 text-[10px] font-semibold uppercase tracking-widest text-txt-tertiary">Conf.</span>
+            <span className={cn('font-mono text-body-sm font-bold', confTier === 'high' ? 'text-prob-high' : confTier === 'mid' ? 'text-prob-mid' : 'text-txt-tertiary')}>
+              {(leg.confidence * 100).toFixed(0)}%
+            </span>
+          </div>
+          {/* Streak explanation */}
+          {leg.streakSummary && (
+            <div className="flex items-start gap-2">
+              <span className="w-14 flex-shrink-0 text-[10px] font-semibold uppercase tracking-widest text-txt-tertiary">Why</span>
+              <p className="flex items-center gap-1 text-caption text-prob-high">
+                <Flame className="h-3 w-3 flex-shrink-0" />
+                {leg.streakSummary}
+              </p>
+            </div>
+          )}
+          {/* What it means */}
+          <div className="flex items-start gap-2">
+            <span className="w-14 flex-shrink-0 text-[10px] font-semibold uppercase tracking-widest text-txt-tertiary">Means</span>
+            <p className="text-caption text-txt-secondary">{marketGuide(leg.marketName, leg.line ?? null)}</p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function TeamStreakGroup({ group }: { group: { name: string; logo?: string; league?: string; streaks: ScoredStreak[] } }) {
   const [collapsed, setCollapsed] = useState(true);
   const bestHitRate = Math.max(...group.streaks.map((s) => s.hitRate));
