@@ -949,40 +949,99 @@ function MarketsTab({
 
       {/* Markets grouped by category */}
       {filteredMarkets.length === 0 && streakSuggestions.length > 0 ? (
-        <div className="space-y-3">
-          <p className="text-caption text-txt-tertiary">
-            No computed markets yet. Showing {streakSuggestions.length} streak-backed patterns:
-          </p>
-          <div className="space-y-2">
-            {streakSuggestions.map((s) => (
-              <div
-                key={`${s.streakId}-${s.marketName}-${s.line}`}
-                className="group flex items-center gap-3 rounded-oracle-md border border-prob-high/30 bg-prob-high/5 px-4 py-3 transition-all hover:border-prob-high/50 hover:shadow-soft"
-              >
-                <div className="flex h-5 w-5 items-center justify-center rounded-full bg-prob-high/20">
-                  <Flame className="h-3 w-3 text-prob-high" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-body-sm font-medium text-txt-primary">
-                    {formatStreakMarketName(s.marketName)}
-                    {s.line != null && <span className="ml-1 font-mono text-txt-secondary">{s.line}</span>}
-                    <span className="ml-2 rounded-full bg-prob-high/15 px-2 py-0.5 text-[10px] font-bold uppercase text-prob-high">
-                      Streak
-                    </span>
-                  </p>
-                  <p className="mt-0.5 text-caption text-txt-tertiary">{s.summary}</p>
-                </div>
-                <span className={cn(
-                  'flex-shrink-0 rounded-full px-3 py-1 font-mono text-body-sm font-bold',
-                  getProbabilityTier(s.confidence) === 'high' ? 'bg-prob-high/15 text-prob-high' :
-                  getProbabilityTier(s.confidence) === 'mid' ? 'bg-prob-mid/15 text-prob-mid' : 'bg-warm-cream text-txt-secondary',
-                )}>
-                  {(s.confidence * 100).toFixed(0)}%
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
+        (() => {
+          // Group streak suggestions into Over/Under pairs like real markets
+          const streakGroups = new Map<string, { over?: StreakSuggestion; under?: StreakSuggestion; standalone?: StreakSuggestion; line?: number }>();
+          for (const s of streakSuggestions) {
+            const isOver = s.marketName.includes('OVER');
+            const isUnder = s.marketName.includes('UNDER');
+            const baseName = s.marketName.replace('_OVER', '').replace('_UNDER', '');
+            const key = `${baseName}:${s.line ?? 'none'}`;
+
+            if (isOver || isUnder) {
+              const existing = streakGroups.get(key) || { line: s.line ?? undefined };
+              if (isOver) existing.over = s;
+              else existing.under = s;
+              streakGroups.set(key, existing);
+            } else {
+              streakGroups.set(`standalone:${s.marketName}:${s.line}`, { standalone: s });
+            }
+          }
+
+          return (
+            <div className="space-y-3">
+              {Array.from(streakGroups.entries()).map(([key, group]) => {
+                if (group.standalone) {
+                  const s = group.standalone;
+                  return (
+                    <div key={key} className="flex w-full items-center gap-3 rounded-oracle-md border border-warm-sand bg-white px-4 py-3">
+                      <span className="flex-1 truncate text-body-sm font-medium text-txt-primary">
+                        {formatStreakMarketName(s.marketName)}
+                        {s.line != null && <span className="ml-1 font-mono text-txt-secondary">{s.line}</span>}
+                      </span>
+                      <span className="flex items-center gap-1 rounded-full bg-prob-high/15 px-2 py-0.5 text-[10px] font-bold text-prob-high">
+                        <Flame className="h-2.5 w-2.5" /> STREAK
+                      </span>
+                      <span className={cn(
+                        'font-mono text-body-sm font-semibold',
+                        getProbabilityTier(s.confidence) === 'high' ? 'text-prob-high' :
+                        getProbabilityTier(s.confidence) === 'mid' ? 'text-prob-mid' : 'text-txt-tertiary',
+                      )}>
+                        {formatProbability(s.confidence)}
+                      </span>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div key={key} className="space-y-2">
+                    {group.line != null && (
+                      <p className="text-caption font-medium text-txt-secondary pl-1">Line {group.line}</p>
+                    )}
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                      {group.over && (
+                        <div className="flex w-full items-center gap-3 rounded-oracle-md border border-warm-sand bg-white px-4 py-3">
+                          <span className="flex-shrink-0 rounded px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide bg-prob-high/15 text-prob-high">OVER</span>
+                          <span className="flex-1 truncate text-body-sm font-medium text-txt-primary">
+                            {formatStreakMarketName(group.over.marketName)}
+                          </span>
+                          <span className="flex items-center gap-1 rounded-full bg-prob-high/15 px-2 py-0.5 text-[10px] font-bold text-prob-high">
+                            <Flame className="h-2.5 w-2.5" /> STREAK
+                          </span>
+                          <span className={cn(
+                            'font-mono text-body-sm font-semibold',
+                            getProbabilityTier(group.over.confidence) === 'high' ? 'text-prob-high' :
+                            getProbabilityTier(group.over.confidence) === 'mid' ? 'text-prob-mid' : 'text-txt-tertiary',
+                          )}>
+                            {formatProbability(group.over.confidence)}
+                          </span>
+                        </div>
+                      )}
+                      {group.under && (
+                        <div className="flex w-full items-center gap-3 rounded-oracle-md border border-warm-sand bg-white px-4 py-3">
+                          <span className="flex-shrink-0 rounded px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide bg-blue-100 text-blue-600">UNDER</span>
+                          <span className="flex-1 truncate text-body-sm font-medium text-txt-primary">
+                            {formatStreakMarketName(group.under.marketName)}
+                          </span>
+                          <span className="flex items-center gap-1 rounded-full bg-prob-high/15 px-2 py-0.5 text-[10px] font-bold text-prob-high">
+                            <Flame className="h-2.5 w-2.5" /> STREAK
+                          </span>
+                          <span className={cn(
+                            'font-mono text-body-sm font-semibold',
+                            getProbabilityTier(group.under.confidence) === 'high' ? 'text-prob-high' :
+                            getProbabilityTier(group.under.confidence) === 'mid' ? 'text-prob-mid' : 'text-txt-tertiary',
+                          )}>
+                            {formatProbability(group.under.confidence)}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })()
       ) : filteredMarkets.length === 0 ? (
         <div className="rounded-oracle-md bg-warm-white py-8 text-center">
           <p className="text-body-sm text-txt-tertiary">No markets available for this category.</p>
