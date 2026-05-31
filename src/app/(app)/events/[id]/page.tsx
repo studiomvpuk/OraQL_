@@ -932,7 +932,7 @@ function MarketsTab({
   } as Market));
 
   // Group into Over/Under tables by market type
-  type TableRow = { line: number | null; over?: Market & { streak?: StreakSuggestion }; under?: Market & { streak?: StreakSuggestion } };
+  type TableRow = { line: number | null | undefined; over?: Market & { streak?: StreakSuggestion }; under?: Market & { streak?: StreakSuggestion } };
   type MarketTable = { title: string; rows: TableRow[]; standalones: (Market & { streak?: StreakSuggestion })[] };
   const tables = new Map<string, MarketTable>();
 
