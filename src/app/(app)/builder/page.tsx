@@ -218,7 +218,7 @@ export default function BuilderPage() {
                     )}
                   </p>
                   <p className="mt-0.5 text-caption text-txt-tertiary">
-                    {s.market.event.league.name}
+                    {s.market.event.league.name}{s.market.event.league.country ? ` (${s.market.event.league.country})` : ''}
                     <span className="mx-1.5 text-warm-stone">·</span>
                     {formatKickoff(s.market.event.kickoffAt)}
                     {s.market.streakSummary && (
@@ -321,7 +321,7 @@ function BuilderTicketCard({
                     {formatMarketName(leg.marketName)}{leg.line != null ? ` ${leg.line}` : ''}
                   </p>
                   <p className="mt-0.5 text-caption text-txt-tertiary">
-                    {leg.leagueName}
+                    {leg.leagueName}{leg.leagueCountry ? ` (${leg.leagueCountry})` : ''}
                     <span className="mx-1.5 text-warm-stone">·</span>
                     {formatKickoff(leg.kickoffAt)}
                   </p>

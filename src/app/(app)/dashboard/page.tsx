@@ -51,9 +51,10 @@ export default function DashboardPage() {
       if (existing) {
         existing.eventCount++;
       } else {
+        const displayName = event.league.country ? `${event.league.name} (${event.league.country})` : event.league.name;
         leagueMap.set(event.league.id || event.league.name, {
           id: event.league.id || event.league.name,
-          name: event.league.name,
+          name: displayName,
           eventCount: 1,
         });
       }
@@ -77,10 +78,10 @@ export default function DashboardPage() {
     (e) => e.status === 'FINISHED' || e.status === 'CANCELLED',
   );
 
-  // Group upcoming events by league
+  // Group upcoming events by league (with country)
   const groupedEvents = upcomingEvents.reduce(
     (acc, event) => {
-      const key = event.league.name;
+      const key = event.league.country ? `${event.league.name} (${event.league.country})` : event.league.name;
       if (!acc[key]) acc[key] = [];
       acc[key].push(event);
       return acc;
@@ -88,10 +89,10 @@ export default function DashboardPage() {
     {} as Record<string, Event[]>,
   );
 
-  // Group completed events by league
+  // Group completed events by league (with country)
   const groupedCompleted = completedEvents.reduce(
     (acc, event) => {
-      const key = event.league.name;
+      const key = event.league.country ? `${event.league.name} (${event.league.country})` : event.league.name;
       if (!acc[key]) acc[key] = [];
       acc[key].push(event);
       return acc;

@@ -184,7 +184,7 @@ export default function EventDetailPage() {
 
         <div className="relative z-10 mx-auto max-w-7xl">
           <div className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-1 text-body-sm text-txt-secondary">
-            <span className="font-semibold">{event.league.name}</span>
+            <span className="font-semibold">{event.league.name}{event.league.country ? ` (${event.league.country})` : ''}</span>
             {event.round && event.round !== 'NaN' && (
               <>
                 <span className="text-warm-stone">·</span>

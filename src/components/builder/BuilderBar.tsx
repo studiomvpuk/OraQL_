@@ -33,7 +33,7 @@ export function BuilderBar() {
                     {s.market.event.awayTeam.shortName || s.market.event.awayTeam.name}
                   </p>
                   <p className="truncate text-caption text-txt-inverse-2">
-                    {s.market.name}
+                    {formatMarket(s.market.name, s.market.line)}
                   </p>
                 </div>
                 <ProbabilityBadge probability={s.market.probability} size="sm" />
@@ -105,4 +105,23 @@ export function BuilderBar() {
       </div>
     </div>
   );
+}
+
+function formatMarket(name: string, line?: number | null): string {
+  const labels: Record<string, string> = {
+    GOALS_OVER: 'Goals Over',
+    GOALS_UNDER: 'Goals Under',
+    TEAM_GOALS_OVER: 'Team Goals Over',
+    TEAM_GOALS_UNDER: 'Team Goals Under',
+    CORNERS_OVER: 'Corners Over',
+    CORNERS_UNDER: 'Corners Under',
+    CARDS_OVER: 'Cards Over',
+    CARDS_UNDER: 'Cards Under',
+    BTTS_YES: 'Both Teams to Score',
+    BTTS_NO: 'No BTTS',
+    CLEAN_SHEET: 'Clean Sheet',
+    MATCH_RESULT_HOME: 'Home Win',
+  };
+  const label = labels[name] || name.replace(/_/g, ' ');
+  return line != null ? `${label} ${line}` : label;
 }

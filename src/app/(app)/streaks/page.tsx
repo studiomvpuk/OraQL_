@@ -574,7 +574,7 @@ function TicketCard({
                 {leg.teamName}
               </p>
               <p className="truncate text-caption text-txt-tertiary">
-                <span className="font-medium text-txt-secondary">{leg.leagueName}</span>
+                <span className="font-medium text-txt-secondary">{leg.leagueName}{leg.leagueCountry ? ` (${leg.leagueCountry})` : ''}</span>
                 <span className="mx-1 text-warm-stone">·</span>
                 <Tip text={marketGuide(leg.marketName, leg.line ?? null)}>
                   <span className="cursor-help border-b border-dotted border-warm-stone/40">{shortMarketLabel(leg.marketName, leg.line)}</span>
