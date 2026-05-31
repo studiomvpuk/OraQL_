@@ -20,6 +20,15 @@ const jetbrainsMono = JetBrains_Mono({
   display: 'swap',
 });
 
+import type { Viewport } from 'next';
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+};
+
 export const metadata: Metadata = {
   title: 'OraQL_ — Sports Betting Intelligence',
   description:

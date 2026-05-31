@@ -20,10 +20,23 @@
     scroll-behavior: smooth;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    /* Prevent pull-to-refresh and horizontal bounce on mobile */
+    overscroll-behavior: none;
   }
 
   body {
     @apply font-body bg-warm-white text-txt-primary;
+    /* Lock to vertical scroll only — no horizontal drag */
+    overflow-x: hidden;
+    overscroll-behavior-x: none;
+    overscroll-behavior-y: none;
+    /* Prevent iOS rubber-band bounce */
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Prevent iOS zoom on input focus (font-size < 16px triggers zoom) */
+  input, select, textarea {
+    font-size: 16px !important;
   }
 
   ::selection {

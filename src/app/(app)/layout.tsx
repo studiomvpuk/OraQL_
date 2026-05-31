@@ -16,7 +16,7 @@ export default function AppLayout({
 
   return (
     <AuthGuard>
-      <div className="min-h-screen bg-warm-white">
+      <div className="min-h-screen overflow-x-hidden bg-warm-white">
         <Sidebar mobileOpen={mobileOpen} onMobileClose={() => setMobileOpen(false)} />
 
         {/* Mobile header (hidden on lg+) */}
