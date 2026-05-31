@@ -332,6 +332,10 @@ export default function EventDetailPage() {
                 setSelectedMarket={setSelectedMarket}
                 addToBuilder={addToBuilder}
                 streakSuggestions={streakSuggestions}
+                homeTeam={event.homeTeam.name}
+                awayTeam={event.awayTeam.name}
+                homeTeamLogo={event.homeTeam.logoUrl}
+                awayTeamLogo={event.awayTeam.logoUrl}
               />
             )}
 
@@ -856,6 +860,10 @@ function MarketsTab({
   setSelectedMarket: (m: Market | null) => void;
   addToBuilder: (id: string) => Promise<void>;
   streakSuggestions?: StreakSuggestion[];
+  homeTeam: string;
+  awayTeam: string;
+  homeTeamLogo?: string;
+  awayTeamLogo?: string;
 }) {
   // Build a lookup of streak-backed markets for green badges
   const streakByMarket = new Map<string, StreakSuggestion>();
@@ -1004,61 +1012,70 @@ function MarketsTab({
       ) : (
         Array.from(tables.entries()).map(([key, table]) => (
           <div key={key} className="overflow-hidden rounded-oracle-md border border-warm-sand">
-            {/* Table header */}
-            <div className="bg-dark-ink px-4 py-2.5">
-              <div className="flex items-center justify-between">
-                <span className="text-caption font-semibold uppercase tracking-widest text-txt-inverse-2">{table.title}</span>
-                {table.rows.length > 0 && (
-                  <div className="flex gap-8 text-caption font-semibold uppercase tracking-widest text-txt-inverse-2">
-                    <span className="w-20 text-center">Over</span>
-                    <span className="w-20 text-center">Under</span>
-                  </div>
-                )}
+            {/* Match header with team names — like a betting site */}
+            <div className="bg-dark-ink px-4 py-3">
+              <div className="flex items-center gap-3">
+                {homeTeamLogo && <img src={homeTeamLogo} alt="" className="h-5 w-5 object-contain" />}
+                <span className="font-display text-body-sm font-semibold text-txt-inverse">{homeTeam}</span>
+                <span className="text-caption text-txt-inverse-2">vs</span>
+                <span className="font-display text-body-sm font-semibold text-txt-inverse">{awayTeam}</span>
+                {awayTeamLogo && <img src={awayTeamLogo} alt="" className="h-5 w-5 object-contain" />}
               </div>
+            </div>
+
+            {/* Market type sub-header with Over/Under columns */}
+            <div className="flex items-center bg-dark-charcoal px-4 py-2">
+              <span className="flex-1 text-caption font-semibold uppercase tracking-widest text-oracle-gold">{table.title}</span>
+              {table.rows.length > 0 && (
+                <div className="flex gap-2">
+                  <span className="w-[4.5rem] text-center text-[10px] font-bold uppercase tracking-widest text-txt-inverse-2">Over</span>
+                  <span className="w-[4.5rem] text-center text-[10px] font-bold uppercase tracking-widest text-txt-inverse-2">Under</span>
+                </div>
+              )}
             </div>
 
             {/* Over/Under rows */}
             {table.rows.map((row, ri) => (
-              <div key={ri} className={cn('flex items-center border-b border-warm-sand/50 last:border-0', ri % 2 === 0 ? 'bg-white' : 'bg-warm-cream/30')}>
+              <div key={ri} className={cn('flex items-center border-b border-warm-sand/50 last:border-0', ri % 2 === 0 ? 'bg-white' : 'bg-warm-cream/20')}>
                 {/* Line label */}
-                <div className="w-20 flex-shrink-0 px-4 py-3">
+                <div className="flex-1 px-4 py-2.5">
                   <span className="font-mono text-body-sm font-bold text-txt-primary">{row.line}</span>
                 </div>
 
-                <div className="flex flex-1 items-center justify-end gap-2 px-2 py-2">
-                  {/* Over cell */}
+                <div className="flex gap-2 px-3 py-1.5">
+                  {/* Over cell — green if >50% */}
                   {row.over ? (
                     <button
                       onClick={() => setSelectedMarket(selectedMarket?.id === row.over!.id ? null : row.over!)}
                       className={cn(
-                        'flex w-20 flex-shrink-0 flex-col items-center justify-center rounded-md px-2 py-2.5 font-mono text-body-sm font-bold transition-all',
+                        'flex w-[4.5rem] items-center justify-center gap-1 rounded px-2 py-2 font-mono text-body-sm font-bold transition-all',
                         row.over.probability > 0.5
-                          ? 'bg-prob-high/20 text-prob-high hover:bg-prob-high/30'
+                          ? 'bg-prob-high text-white hover:bg-prob-high/90'
                           : 'bg-warm-cream text-txt-tertiary hover:bg-warm-sand',
                         selectedMarket?.id === row.over.id && 'ring-2 ring-oracle-gold',
                       )}
                     >
                       {(row.over.probability * 100).toFixed(0)}%
-                      {row.over.streak && <Flame className="mt-0.5 h-3 w-3 text-prob-high" />}
+                      {row.over.streak && <Flame className="h-3 w-3" />}
                     </button>
-                  ) : <div className="w-20 flex-shrink-0" />}
+                  ) : <div className="w-[4.5rem]" />}
 
-                  {/* Under cell */}
+                  {/* Under cell — green if >50% */}
                   {row.under ? (
                     <button
                       onClick={() => setSelectedMarket(selectedMarket?.id === row.under!.id ? null : row.under!)}
                       className={cn(
-                        'flex w-20 flex-shrink-0 flex-col items-center justify-center rounded-md px-2 py-2.5 font-mono text-body-sm font-bold transition-all',
+                        'flex w-[4.5rem] items-center justify-center gap-1 rounded px-2 py-2 font-mono text-body-sm font-bold transition-all',
                         row.under.probability > 0.5
-                          ? 'bg-prob-high/20 text-prob-high hover:bg-prob-high/30'
+                          ? 'bg-prob-high text-white hover:bg-prob-high/90'
                           : 'bg-warm-cream text-txt-tertiary hover:bg-warm-sand',
                         selectedMarket?.id === row.under.id && 'ring-2 ring-oracle-gold',
                       )}
                     >
                       {(row.under.probability * 100).toFixed(0)}%
-                      {row.under.streak && <Flame className="mt-0.5 h-3 w-3 text-prob-high" />}
+                      {row.under.streak && <Flame className="h-3 w-3" />}
                     </button>
-                  ) : <div className="w-20 flex-shrink-0" />}
+                  ) : <div className="w-[4.5rem]" />}
                 </div>
               </div>
             ))}
@@ -1066,22 +1083,22 @@ function MarketsTab({
             {/* Standalone markets (BTTS, Clean Sheet, etc.) */}
             {table.standalones.map((m) => (
               <div key={m.id} className="flex items-center border-b border-warm-sand/50 last:border-0 bg-white">
-                <div className="flex-1 px-4 py-3">
+                <div className="flex-1 px-4 py-2.5">
                   <span className="text-body-sm font-medium text-txt-primary">{m.shortName || formatStreakMarketName(m.name)}</span>
                 </div>
-                <div className="px-4 py-2">
+                <div className="px-3 py-1.5">
                   <button
                     onClick={() => setSelectedMarket(selectedMarket?.id === m.id ? null : m)}
                     className={cn(
-                      'rounded-md px-4 py-2.5 font-mono text-body-sm font-bold transition-all',
+                      'flex items-center gap-1 rounded px-4 py-2 font-mono text-body-sm font-bold transition-all',
                       m.probability > 0.5
-                        ? 'bg-prob-high/20 text-prob-high hover:bg-prob-high/30'
+                        ? 'bg-prob-high text-white hover:bg-prob-high/90'
                         : 'bg-warm-cream text-txt-tertiary hover:bg-warm-sand',
                       selectedMarket?.id === m.id && 'ring-2 ring-oracle-gold',
                     )}
                   >
                     {(m.probability * 100).toFixed(0)}%
-                    {m.streak && <Flame className="ml-1 inline h-3 w-3 text-prob-high" />}
+                    {m.streak && <Flame className="h-3 w-3" />}
                   </button>
                 </div>
               </div>
