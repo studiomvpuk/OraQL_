@@ -49,7 +49,7 @@ export default function StreaksPage() {
     setIsLoading(true);
     try {
       const [streaksRes, ticketsRes, statsRes, leaguesRes] = await Promise.all([
-        api.get<{ streaks: ScoredStreak[]; total: number }>('/streaks?limit=30'),
+        api.get<{ streaks: ScoredStreak[]; total: number }>('/streaks?limit=100'),
         api.get<{ tickets: SuggestedTicket[]; total: number }>('/streaks/tickets?limit=6'),
         api.get<StreakStats>('/streaks/stats'),
         api.get<{ leagues: League[]; total: number }>('/streaks/leagues'),
@@ -69,8 +69,8 @@ export default function StreaksPage() {
     setIsFilterLoading(true);
     try {
       const query = league
-        ? `/streaks?limit=30&leagueId=${encodeURIComponent(league.id)}`
-        : '/streaks?limit=30';
+        ? `/streaks?limit=100&leagueId=${encodeURIComponent(league.id)}`
+        : '/streaks?limit=100';
       const res = await api.get<{ streaks: ScoredStreak[]; total: number }>(query);
       setFilteredStreaks(res.streaks || []);
     } catch {
@@ -457,7 +457,7 @@ export default function StreaksPage() {
           );
         })()}
 
-        {/* Streak list */}
+        {/* Streak list — grouped by team */}
         {isLoading || isFilterLoading ? (
           <div className="space-y-3">
             {[1, 2, 3, 4, 5].map((i) => (
@@ -465,10 +465,28 @@ export default function StreaksPage() {
             ))}
           </div>
         ) : filteredStreaks.length > 0 ? (
-          <div className="space-y-2">
-            {filteredStreaks.map((streak, idx) => (
-              <StreakRow key={streak.id} streak={streak} rank={idx + 1} />
-            ))}
+          <div className="space-y-4">
+            {(() => {
+              // Group streaks by team
+              const teamGroups = new Map<string, { name: string; logo?: string; league?: string; streaks: ScoredStreak[] }>();
+              for (const s of filteredStreaks) {
+                const teamKey = s.teamId;
+                const existing = teamGroups.get(teamKey);
+                if (existing) {
+                  existing.streaks.push(s);
+                } else {
+                  teamGroups.set(teamKey, {
+                    name: s.teamName || s.team?.name || 'Unknown',
+                    logo: s.teamLogoUrl || s.team?.logoUrl || undefined,
+                    league: s.leagueName || s.team?.league?.name || undefined,
+                    streaks: [s],
+                  });
+                }
+              }
+              return Array.from(teamGroups.entries()).map(([teamId, group]) => (
+                <TeamStreakGroup key={teamId} group={group} />
+              ));
+            })()}
           </div>
         ) : selectedLeague ? (
           <div className="rounded-oracle-lg border-2 border-dashed border-warm-stone bg-warm-cream/30 py-12 text-center">
@@ -824,6 +842,135 @@ function StreakRow({ streak, rank }: { streak: ScoredStreak; rank: number }) {
               <span>Oldest</span>
             </div>
           </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─── Team Streak Group ─── */
+function TeamStreakGroup({ group }: { group: { name: string; logo?: string; league?: string; streaks: ScoredStreak[] } }) {
+  const [collapsed, setCollapsed] = useState(false);
+  const bestHitRate = Math.max(...group.streaks.map((s) => s.hitRate));
+  const bestTier = getProbabilityTier(bestHitRate);
+
+  return (
+    <div className="overflow-hidden rounded-oracle-lg border border-warm-sand bg-white">
+      {/* Team header — always visible */}
+      <button
+        onClick={() => setCollapsed(!collapsed)}
+        className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-warm-cream/50"
+      >
+        {group.logo ? (
+          <img src={group.logo} alt="" className="h-7 w-7 flex-shrink-0 object-contain" />
+        ) : (
+          <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-warm-sand text-[10px] font-bold text-txt-inverse">
+            {group.name.charAt(0)}
+          </div>
+        )}
+        <div className="min-w-0 flex-1">
+          <p className="font-display text-body font-semibold tracking-tight text-txt-primary">{group.name}</p>
+          {group.league && (
+            <p className="text-caption text-txt-tertiary">{group.league}</p>
+          )}
+        </div>
+        <span className={cn(
+          'rounded-full px-2.5 py-0.5 text-caption font-bold',
+          bestTier === 'high' ? 'bg-prob-high/15 text-prob-high' :
+          bestTier === 'mid' ? 'bg-prob-mid/15 text-prob-mid' : 'bg-warm-cream text-txt-tertiary',
+        )}>
+          {group.streaks.length} {group.streaks.length === 1 ? 'streak' : 'streaks'}
+        </span>
+        <ChevronRight className={cn(
+          'h-4 w-4 flex-shrink-0 text-txt-tertiary transition-transform duration-200',
+          !collapsed && 'rotate-90',
+        )} />
+      </button>
+
+      {/* Streaks list — open by default */}
+      {!collapsed && (
+        <div className="border-t border-warm-sand bg-warm-cream/20 px-2 py-2 space-y-1.5">
+          {group.streaks.map((streak) => (
+            <StreakRowCompact key={streak.id} streak={streak} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─── Compact Streak Row (inside team group) ─── */
+function StreakRowCompact({ streak }: { streak: ScoredStreak }) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const hitRateTier = getProbabilityTier(streak.hitRate);
+  const confTier = getProbabilityTier(streak.confidence);
+  const hitCount = Math.round(streak.hitRate * streak.windowSize);
+
+  return (
+    <div className="overflow-hidden rounded-oracle-md bg-white">
+      <button
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="group flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-warm-cream/50"
+      >
+        <div className="min-w-0 flex-1">
+          <p className="text-body-sm text-txt-secondary">
+            <Tip text={marketGuide(streak.marketName, streak.line ?? null)}>
+              <span className="cursor-help border-b border-dotted border-warm-stone/50 font-medium text-txt-primary">
+                {formatMarketName(streak.marketName)}
+                {streak.line != null && ` ${streak.line}`}
+              </span>
+            </Tip>
+            <span className="mx-1.5 text-warm-stone">·</span>
+            {streak.venueFilter === 'ALL' ? 'All' : streak.venueFilter === 'HOME' ? 'Home' : 'Away'}
+            <span className="mx-1.5 text-warm-stone">·</span>
+            Last {streak.windowSize}
+          </p>
+        </div>
+
+        <Tip text={`${streak.streakLength} consecutive matches hit`}>
+          <div className="flex flex-shrink-0 items-center gap-1 rounded-full bg-oracle-gold/15 px-2 py-0.5">
+            <Flame className="h-3 w-3 text-oracle-gold" />
+            <span className="font-mono text-caption font-bold text-oracle-gold-dark">{streak.streakLength}</span>
+          </div>
+        </Tip>
+
+        <span className={cn(
+          'flex-shrink-0 font-mono text-caption font-semibold',
+          hitRateTier === 'high' ? 'text-prob-high' :
+          hitRateTier === 'mid' ? 'text-prob-mid' : 'text-txt-tertiary',
+        )}>
+          {(streak.hitRate * 100).toFixed(0)}%
+        </span>
+
+        <ChevronRight className={cn(
+          'h-3.5 w-3.5 flex-shrink-0 text-txt-tertiary transition-transform duration-200',
+          isExpanded && 'rotate-90',
+        )} />
+      </button>
+
+      {isExpanded && (
+        <div className="border-t border-warm-sand/60 bg-warm-cream/30 px-3 py-3">
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="rounded-oracle-sm bg-white p-2.5">
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-txt-tertiary">Hit Rate</p>
+              <p className={cn('font-mono text-body font-bold', hitRateTier === 'high' ? 'text-prob-high' : hitRateTier === 'mid' ? 'text-prob-mid' : 'text-txt-tertiary')}>
+                {hitCount}/{streak.windowSize}
+              </p>
+            </div>
+            <div className="rounded-oracle-sm bg-white p-2.5">
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-txt-tertiary">Confidence</p>
+              <p className={cn('font-mono text-body font-bold', confTier === 'high' ? 'text-prob-high' : confTier === 'mid' ? 'text-prob-mid' : 'text-txt-tertiary')}>
+                {(streak.confidence * 100).toFixed(0)}%
+              </p>
+            </div>
+            <div className="rounded-oracle-sm bg-white p-2.5">
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-txt-tertiary">Streak</p>
+              <p className="font-mono text-body font-bold text-oracle-gold-dark">{streak.streakLength} in a row</p>
+            </div>
+          </div>
+          {streak.summary && (
+            <p className="mt-2 text-caption text-txt-secondary">{streak.summary}</p>
+          )}
         </div>
       )}
     </div>
