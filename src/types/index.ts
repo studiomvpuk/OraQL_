@@ -97,7 +97,10 @@ export interface Market {
   isValueBet: boolean;
   explanation?: string;
   explanationFactors?: Record<string, unknown>;
-  probabilityUpdatedAt: string;
+  probabilityUpdatedAt?: string;
+  streakId?: string;
+  streakSummary?: string;
+  isActive?: boolean;
 }
 
 export interface Pick {
