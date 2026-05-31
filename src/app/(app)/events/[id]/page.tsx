@@ -850,6 +850,10 @@ function MarketsTab({
   setSelectedMarket,
   addToBuilder,
   streakSuggestions = [],
+  homeTeam,
+  awayTeam,
+  homeTeamLogo,
+  awayTeamLogo,
 }: {
   markets: Market[];
   categories: string[];
