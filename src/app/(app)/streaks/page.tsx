@@ -102,38 +102,19 @@ export default function StreaksPage() {
     if (applyingTicketId) return;
     setApplyingTicketId(ticket.id);
     try {
-      const legsWithMarkets = ticket.legs.filter((l) => l.marketId);
-      if (legsWithMarkets.length === 0) {
-        // No markets computed yet — trigger probability computation first
-        const eventIds = [...new Set(ticket.legs.map((l) => l.eventId))];
-        for (const eventId of eventIds) {
-          try {
-            await api.post('/probability/compute', { eventId });
-          } catch {
-            // may already exist
-          }
-        }
-        // Retry finding markets after computation
-        const retryRes = await api.get<{ tickets: SuggestedTicket[]; total: number }>('/streaks/tickets?limit=6');
-        const updatedTicket = (retryRes.tickets || []).find((t) =>
-          t.legs.length === ticket.legs.length &&
-          t.legs.some((l) => l.teamName === ticket.legs[0]?.teamName)
-        );
-        if (updatedTicket) {
-          const retryLegs = updatedTicket.legs.filter((l) => l.marketId);
-          if (retryLegs.length > 0) {
-            await api.post('/builder/apply-suggestion', {
-              legs: retryLegs.map((l) => ({ marketId: l.marketId })),
-            });
-            await useBuilderStore.getState().load();
-          }
-        }
-      } else {
-        await api.post('/builder/apply-suggestion', {
-          legs: legsWithMarkets.map((l) => ({ marketId: l.marketId })),
-        });
-        await useBuilderStore.getState().load();
-      }
+      // Send full leg data — backend will find or create markets automatically
+      await api.post('/builder/apply-suggestion', {
+        legs: ticket.legs.map((l) => ({
+          marketId: l.marketId || undefined,
+          eventId: l.eventId,
+          marketName: l.marketName,
+          line: l.line,
+          confidence: l.confidence,
+          streakId: l.streakId,
+          streakSummary: l.streakSummary,
+        })),
+      });
+      await useBuilderStore.getState().load();
       setAppliedTicketId(ticket.id);
       setTimeout(() => setAppliedTicketId(null), 2500);
     } catch {
@@ -850,7 +831,7 @@ function StreakRow({ streak, rank }: { streak: ScoredStreak; rank: number }) {
 
 /* ─── Team Streak Group ─── */
 function TeamStreakGroup({ group }: { group: { name: string; logo?: string; league?: string; streaks: ScoredStreak[] } }) {
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(true);
   const bestHitRate = Math.max(...group.streaks.map((s) => s.hitRate));
   const bestTier = getProbabilityTier(bestHitRate);
 

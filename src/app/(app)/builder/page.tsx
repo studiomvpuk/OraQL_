@@ -42,13 +42,18 @@ export default function BuilderPage() {
     if (applyingId) return;
     setApplyingId(ticket.id);
     try {
-      const legsWithMarkets = ticket.legs.filter((l) => l.marketId);
-      if (legsWithMarkets.length > 0) {
-        await api.post('/builder/apply-suggestion', {
-          legs: legsWithMarkets.map((l) => ({ marketId: l.marketId })),
-        });
-        await load();
-      }
+      await api.post('/builder/apply-suggestion', {
+        legs: ticket.legs.map((l) => ({
+          marketId: l.marketId || undefined,
+          eventId: l.eventId,
+          marketName: l.marketName,
+          line: l.line,
+          confidence: l.confidence,
+          streakId: l.streakId,
+          streakSummary: l.streakSummary,
+        })),
+      });
+      await load();
       setAppliedId(ticket.id);
       setTimeout(() => setAppliedId(null), 2500);
     } catch {
