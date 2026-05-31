@@ -373,7 +373,7 @@ function BuilderExpandableLeg({ leg }: { leg: import('@/types').TicketLeg }) {
           <p className="truncate text-caption text-txt-tertiary">
             {leg.leagueName}{leg.leagueCountry ? ` (${leg.leagueCountry})` : ''}
             <span className="mx-1 text-warm-stone">·</span>
-            {formatMarket(leg.marketName, leg.line)} vs {leg.opponent}
+            {formatMarketName(leg.marketName) + (leg.line != null ? ` ${leg.line}` : '')} vs {leg.opponent}
           </p>
         </div>
         <span className={cn(
