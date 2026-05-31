@@ -13,6 +13,7 @@ import {
   Shield,
   X,
   Search,
+  Info,
 } from 'lucide-react';
 import { cn, formatProbability, getProbabilityTier } from '@/lib/utils';
 import { useBuilderStore } from '@/stores/builder.store';
@@ -153,21 +154,25 @@ export default function StreaksPage() {
                 icon={Target}
                 label="Active Streaks"
                 value={stats.activeStreaks.toLocaleString()}
+                tooltip="Total number of repeating patterns currently detected across all leagues and markets"
               />
               <StatCard
                 icon={TrendingUp}
                 label="Avg Hit Rate"
                 value={stats.averageHitRate ? `${(stats.averageHitRate * 100).toFixed(0)}%` : '—'}
+                tooltip="How often a streak's predicted outcome actually happened in recent matches. Higher = more reliable pattern"
               />
               <StatCard
                 icon={Flame}
                 label="Avg Streak Length"
                 value={stats.averageStreakLength ? stats.averageStreakLength.toFixed(1) : '—'}
+                tooltip="Average number of consecutive matches where the pattern held. Longer streaks suggest stronger trends"
               />
               <StatCard
                 icon={Shield}
                 label="Avg Confidence"
                 value={stats.averageConfidence ? `${(stats.averageConfidence * 100).toFixed(0)}%` : '—'}
+                tooltip="Overall engine confidence combining hit rate, streak length, and sample size. Higher = more trustworthy"
               />
             </div>
           ) : null}
@@ -461,10 +466,12 @@ function StatCard({
   icon: Icon,
   label,
   value,
+  tooltip,
 }: {
   icon: typeof Target;
   label: string;
   value: string;
+  tooltip?: string;
 }) {
   return (
     <div className="rounded-oracle-md border border-dark-slate bg-dark-charcoal p-4">
@@ -473,6 +480,11 @@ function StatCard({
         <span className="text-caption font-semibold uppercase tracking-widest text-txt-inverse-2">
           {label}
         </span>
+        {tooltip && (
+          <Tip text={tooltip}>
+            <Info className="h-3 w-3 text-txt-inverse-2/50 transition-colors hover:text-oracle-gold" />
+          </Tip>
+        )}
       </div>
       <p className="font-mono text-display-sm font-bold text-txt-inverse">{value}</p>
     </div>
@@ -532,7 +544,10 @@ function TicketCard({
                 {leg.teamName.length > 15 ? leg.teamName.substring(0, 15) : leg.teamName}
               </p>
               <p className="truncate text-caption text-txt-tertiary">
-                {shortMarketLabel(leg.marketName, leg.line)} vs {leg.opponent}
+                <Tip text={marketGuide(leg.marketName, leg.line ?? null)}>
+                  <span className="cursor-help border-b border-dotted border-warm-stone/40">{shortMarketLabel(leg.marketName, leg.line)}</span>
+                </Tip>
+                {' '}vs {leg.opponent}
               </p>
             </div>
             <span className={cn(
@@ -553,7 +568,9 @@ function TicketCard({
           {formatProbability(ticket.averageConfidence)} avg conf
         </span>
         <span className="text-warm-stone">·</span>
-        <span>Q: {(ticket.qualityScore * 100).toFixed(0)}</span>
+        <Tip text="Quality score — combines confidence, probability, league diversity, and number of legs. Higher = stronger ticket">
+          <span className="cursor-help">Q: {(ticket.qualityScore * 100).toFixed(0)}</span>
+        </Tip>
       </div>
 
       {/* Apply button */}
@@ -630,31 +647,45 @@ function StreakRow({ streak, rank }: { streak: ScoredStreak; rank: number }) {
                 <span className="mx-1.5 text-warm-stone">·</span>
               </>
             )}
-            {formatMarketName(streak.marketName)}
-            {streak.line != null && ` ${streak.line}`}
+            <Tip text={marketGuide(streak.marketName, streak.line ?? null)}>
+              <span className="cursor-help border-b border-dotted border-warm-stone/50">
+                {formatMarketName(streak.marketName)}
+                {streak.line != null && ` ${streak.line}`}
+              </span>
+            </Tip>
             <span className="mx-1.5 text-warm-stone">·</span>
-            {streak.venueFilter === 'ALL' ? 'All venues' : streak.venueFilter === 'HOME' ? 'Home' : 'Away'}
+            <Tip text={streak.venueFilter === 'ALL' ? 'Pattern tracked across all home and away matches' : streak.venueFilter === 'HOME' ? 'Pattern only tracked in home matches' : 'Pattern only tracked in away matches'}>
+              <span className="cursor-help border-b border-dotted border-warm-stone/50">
+                {streak.venueFilter === 'ALL' ? 'All venues' : streak.venueFilter === 'HOME' ? 'Home' : 'Away'}
+              </span>
+            </Tip>
             <span className="mx-1.5 text-warm-stone">·</span>
-            Last {streak.windowSize} matches
+            <Tip text={`Analysis window — how many recent matches were checked for this pattern`}>
+              <span className="cursor-help border-b border-dotted border-warm-stone/50">Last {streak.windowSize} matches</span>
+            </Tip>
           </p>
         </div>
 
         {/* Streak length badge */}
-        <div className="flex flex-shrink-0 items-center gap-1 rounded-full bg-oracle-gold/15 px-2.5 py-1">
-          <Flame className="h-3 w-3 text-oracle-gold" />
-          <span className="font-mono text-caption font-bold text-oracle-gold-dark">
-            {streak.streakLength}
-          </span>
-        </div>
+        <Tip text={`${streak.streakLength} consecutive matches where this pattern hit in a row — the current unbroken run`}>
+          <div className="flex flex-shrink-0 items-center gap-1 rounded-full bg-oracle-gold/15 px-2.5 py-1">
+            <Flame className="h-3 w-3 text-oracle-gold" />
+            <span className="font-mono text-caption font-bold text-oracle-gold-dark">
+              {streak.streakLength}
+            </span>
+          </div>
+        </Tip>
 
         {/* Hit rate */}
-        <span className={cn(
-          'flex-shrink-0 font-mono text-body-sm font-semibold',
-          hitRateTier === 'high' ? 'text-prob-high' :
-          hitRateTier === 'mid' ? 'text-prob-mid' : 'text-txt-tertiary',
-        )}>
-          {(streak.hitRate * 100).toFixed(0)}%
-        </span>
+        <Tip text={`Hit rate: ${hitCount}/${streak.windowSize} matches matched this pattern. Higher % = more consistent trend`}>
+          <span className={cn(
+            'flex-shrink-0 font-mono text-body-sm font-semibold',
+            hitRateTier === 'high' ? 'text-prob-high' :
+            hitRateTier === 'mid' ? 'text-prob-mid' : 'text-txt-tertiary',
+          )}>
+            {(streak.hitRate * 100).toFixed(0)}%
+          </span>
+        </Tip>
 
         {/* Arrow — rotates when expanded */}
         <ChevronRight className={cn(
@@ -669,7 +700,10 @@ function StreakRow({ streak, rank }: { streak: ScoredStreak; rank: number }) {
           <div className="grid gap-4 sm:grid-cols-3">
             {/* Stat: Hit Rate */}
             <div className="rounded-oracle-sm bg-white p-3">
-              <p className="mb-1 text-caption font-semibold uppercase tracking-widest text-txt-tertiary">Hit Rate</p>
+              <p className="mb-1 flex items-center gap-1 text-caption font-semibold uppercase tracking-widest text-txt-tertiary">
+                Hit Rate
+                <Tip text="How many of the analysed matches matched this pattern. 10/10 = pattern hit in every match checked"><Info className="h-3 w-3 text-warm-stone" /></Tip>
+              </p>
               <p className={cn(
                 'font-mono text-heading font-bold',
                 hitRateTier === 'high' ? 'text-prob-high' :
@@ -684,7 +718,10 @@ function StreakRow({ streak, rank }: { streak: ScoredStreak; rank: number }) {
 
             {/* Stat: Confidence */}
             <div className="rounded-oracle-sm bg-white p-3">
-              <p className="mb-1 text-caption font-semibold uppercase tracking-widest text-txt-tertiary">Confidence</p>
+              <p className="mb-1 flex items-center gap-1 text-caption font-semibold uppercase tracking-widest text-txt-tertiary">
+                Confidence
+                <Tip text="Engine confidence combining hit rate, streak length, and sample size. Higher = more likely the pattern continues"><Info className="h-3 w-3 text-warm-stone" /></Tip>
+              </p>
               <p className={cn(
                 'font-mono text-heading font-bold',
                 confTier === 'high' ? 'text-prob-high' :
@@ -699,7 +736,10 @@ function StreakRow({ streak, rank }: { streak: ScoredStreak; rank: number }) {
 
             {/* Stat: Streak Info */}
             <div className="rounded-oracle-sm bg-white p-3">
-              <p className="mb-1 text-caption font-semibold uppercase tracking-widest text-txt-tertiary">Streak</p>
+              <p className="mb-1 flex items-center gap-1 text-caption font-semibold uppercase tracking-widest text-txt-tertiary">
+                Streak
+                <Tip text="Number of consecutive matches in a row where this pattern held without breaking"><Info className="h-3 w-3 text-warm-stone" /></Tip>
+              </p>
               <p className="font-mono text-heading font-bold text-oracle-gold-dark">
                 {streak.streakLength} consecutive
               </p>
@@ -790,4 +830,36 @@ function shortMarketLabel(marketName: string, line: number | null): string {
     MATCH_RESULT_HOME: 'Win',
   };
   return labels[marketName] || marketName;
+}
+
+/* ─── Tooltip Component ─── */
+function Tip({ children, text }: { children: React.ReactNode; text: string }) {
+  return (
+    <span className="group/tip relative inline-flex cursor-help">
+      {children}
+      <span className="pointer-events-none absolute bottom-full left-1/2 z-50 mb-2 w-52 -translate-x-1/2 rounded-oracle-sm bg-dark-ink px-3 py-2 text-[11px] leading-snug text-white opacity-0 shadow-lg transition-opacity duration-150 group-hover/tip:opacity-100">
+        {text}
+        <span className="absolute left-1/2 top-full -translate-x-1/2 border-4 border-transparent border-t-dark-ink" />
+      </span>
+    </span>
+  );
+}
+
+/** Explains what a market abbreviation means */
+function marketGuide(name: string, line: number | null): string {
+  const guides: Record<string, string> = {
+    GOALS_OVER: `Match must have more than ${line} total goals from both teams combined`,
+    GOALS_UNDER: `Match must have fewer than ${line} total goals from both teams combined`,
+    TEAM_GOALS_OVER: `This team must score more than ${line} goals in the match`,
+    TEAM_GOALS_UNDER: `This team must score fewer than ${line} goals in the match`,
+    CORNERS_OVER: `Match must have more than ${line} total corners from both teams`,
+    CORNERS_UNDER: `Match must have fewer than ${line} total corners from both teams`,
+    CARDS_OVER: `Match must have more than ${line} total cards (yellow + red) from both teams`,
+    CARDS_UNDER: `Match must have fewer than ${line} total cards from both teams`,
+    BTTS_YES: 'Both teams must score at least one goal each',
+    BTTS_NO: 'At least one team does not score — one or both sides finish with zero goals',
+    CLEAN_SHEET: 'This team concedes zero goals — the opposition does not score',
+    MATCH_RESULT_HOME: 'The home team wins the match',
+  };
+  return guides[name] || `${formatMarketName(name)} market`;
 }
