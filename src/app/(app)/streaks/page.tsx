@@ -27,7 +27,7 @@ export default function StreaksPage() {
   const [tickets, setTickets] = useState<SuggestedTicket[]>([]);
   const [stats, setStats] = useState<StreakStats | null>(null);
   const [leagues, setLeagues] = useState<League[]>([]);
-  const [selectedLeague, setSelectedLeague] = useState<string | null>(null);
+  const [selectedLeague, setSelectedLeague] = useState<{ id: string; name: string; country?: string } | null>(null);
   const [filteredStreaks, setFilteredStreaks] = useState<ScoredStreak[]>([]);
   const [isFilterLoading, setIsFilterLoading] = useState(false);
   const [openLetter, setOpenLetter] = useState<string | null>(null);
@@ -65,11 +65,11 @@ export default function StreaksPage() {
     setIsLoading(false);
   }
 
-  async function loadStreaksForLeague(league: string | null) {
+  async function loadStreaksForLeague(league: { id: string; name: string } | null) {
     setIsFilterLoading(true);
     try {
       const query = league
-        ? `/streaks?limit=30&league=${encodeURIComponent(league)}`
+        ? `/streaks?limit=30&leagueId=${encodeURIComponent(league.id)}`
         : '/streaks?limit=30';
       const res = await api.get<{ streaks: ScoredStreak[]; total: number }>(query);
       setFilteredStreaks(res.streaks || []);
@@ -103,11 +103,35 @@ export default function StreaksPage() {
     setApplyingTicketId(ticket.id);
     try {
       const legsWithMarkets = ticket.legs.filter((l) => l.marketId);
-      if (legsWithMarkets.length > 0) {
+      if (legsWithMarkets.length === 0) {
+        // No markets computed yet — trigger probability computation first
+        const eventIds = [...new Set(ticket.legs.map((l) => l.eventId))];
+        for (const eventId of eventIds) {
+          try {
+            await api.post('/probability/compute', { eventId });
+          } catch {
+            // may already exist
+          }
+        }
+        // Retry finding markets after computation
+        const retryRes = await api.get<{ tickets: SuggestedTicket[]; total: number }>('/streaks/tickets?limit=6');
+        const updatedTicket = (retryRes.tickets || []).find((t) =>
+          t.legs.length === ticket.legs.length &&
+          t.legs.some((l) => l.teamName === ticket.legs[0]?.teamName)
+        );
+        if (updatedTicket) {
+          const retryLegs = updatedTicket.legs.filter((l) => l.marketId);
+          if (retryLegs.length > 0) {
+            await api.post('/builder/apply-suggestion', {
+              legs: retryLegs.map((l) => ({ marketId: l.marketId })),
+            });
+            await useBuilderStore.getState().load();
+          }
+        }
+      } else {
         await api.post('/builder/apply-suggestion', {
           legs: legsWithMarkets.map((l) => ({ marketId: l.marketId })),
         });
-        // Reload builder store
         await useBuilderStore.getState().load();
       }
       setAppliedTicketId(ticket.id);
@@ -255,7 +279,7 @@ export default function StreaksPage() {
                   onClick={() => setSelectedLeague(null)}
                   className="flex items-center gap-1.5 rounded-full border border-oracle-gold bg-oracle-gold/15 px-3 py-1 text-caption font-semibold text-oracle-gold-dark transition-colors hover:bg-oracle-gold/25"
                 >
-                  {selectedLeague}
+                  {selectedLeague.name}{selectedLeague.country ? ` (${selectedLeague.country})` : ''}
                   <X className="h-3 w-3" />
                 </button>
               </div>
@@ -283,7 +307,7 @@ export default function StreaksPage() {
                 const letterStreakCount = letterLeagues.reduce(
                   (sum, l) => sum + (streakCountByLeague.get(l.name) || 0), 0,
                 );
-                const hasActiveFilter = selectedLeague && letterLeagues.some((l) => l.name === selectedLeague);
+                const hasActiveFilter = selectedLeague && letterLeagues.some((l) => l.id === selectedLeague.id);
 
                 return (
                   <button
@@ -382,12 +406,12 @@ export default function StreaksPage() {
                   </p>
                 ) : searchFiltered.map((league) => {
                   const count = league.streakCount || 0;
-                  const isSelected = selectedLeague === league.name;
+                  const isSelected = selectedLeague?.id === league.id;
                   return (
                     <button
                       key={league.id}
                       onClick={() => {
-                        setSelectedLeague(isSelected ? null : league.name);
+                        setSelectedLeague(isSelected ? null : { id: league.id, name: league.name, country: league.country });
                         setOpenLetter(null);
                         setModalSearch('');
                       }}
@@ -450,7 +474,7 @@ export default function StreaksPage() {
           <div className="rounded-oracle-lg border-2 border-dashed border-warm-stone bg-warm-cream/30 py-12 text-center">
             <Target className="mx-auto mb-4 h-10 w-10 text-warm-taupe" />
             <p className="text-body font-medium text-txt-secondary">
-              No active streaks for {selectedLeague}
+              No active streaks for {selectedLeague.name}{selectedLeague.country ? ` (${selectedLeague.country})` : ''}
             </p>
             <p className="mt-2 text-body-sm text-txt-tertiary">
               The streak engine hasn&apos;t detected any qualifying patterns for this league yet.
@@ -550,9 +574,11 @@ function TicketCard({
             )}
             <div className="min-w-0 flex-1">
               <p className="truncate text-body-sm font-medium text-txt-primary">
-                {leg.teamName.length > 15 ? leg.teamName.substring(0, 15) : leg.teamName}
+                {leg.teamName}
               </p>
               <p className="truncate text-caption text-txt-tertiary">
+                <span className="font-medium text-txt-secondary">{leg.leagueName}</span>
+                <span className="mx-1 text-warm-stone">·</span>
                 <Tip text={marketGuide(leg.marketName, leg.line ?? null)}>
                   <span className="cursor-help border-b border-dotted border-warm-stone/40">{shortMarketLabel(leg.marketName, leg.line)}</span>
                 </Tip>
