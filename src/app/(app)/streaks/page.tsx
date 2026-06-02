@@ -268,45 +268,27 @@ export default function StreaksPage() {
 
         {/* League filter: Country-first navigation */}
         {!isLoading && leagues.length > 0 && (
-          <div className="mb-6">
-            {/* Active filter indicator */}
+          <div className="mb-6 space-y-3">
+            {/* Active filter pill */}
             {selectedLeague && (
-              <div className="mb-3 flex items-center gap-2">
+              <div className="flex items-center gap-2">
                 <span className="text-caption font-semibold text-txt-tertiary">Filtered by:</span>
                 <button
                   onClick={() => setSelectedLeague(null)}
-                  className="flex items-center gap-1.5 rounded-full border border-oracle-gold bg-oracle-gold/15 px-3 py-1 text-caption font-semibold text-oracle-gold-dark transition-colors hover:bg-oracle-gold/25"
+                  className="flex items-center gap-1.5 rounded-full border border-oracle-gold bg-oracle-gold/15 px-3 py-1 text-caption font-semibold text-oracle-gold-dark hover:bg-oracle-gold/25"
                 >
-                  {selectedLeague.name}{selectedLeague.country ? ` (${selectedLeague.country})` : ''}
+                  {selectedLeague.name} ({selectedLeague.country || 'World'})
                   <X className="h-3 w-3" />
                 </button>
               </div>
             )}
 
-            {/* Search bar */}
-            <div className="mb-3 flex items-center gap-2 rounded-oracle-md bg-warm-cream px-3 py-2">
-              <Search className="h-4 w-4 flex-shrink-0 text-txt-tertiary" />
-              <input
-                type="text"
-                value={modalSearch}
-                onChange={(e) => setModalSearch(e.target.value)}
-                placeholder="Search country or league..."
-                className="w-full bg-transparent text-body-sm text-txt-primary placeholder:text-txt-tertiary outline-none"
-              />
-              {modalSearch && (
-                <button onClick={() => setModalSearch('')} className="text-txt-tertiary hover:text-txt-primary">
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              )}
-            </div>
-
-            {/* Country pills — popular first, then alphabetical */}
-            <div className="flex flex-wrap gap-1.5">
-              {/* All */}
+            {/* Top row: All + popular countries + search */}
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
               <button
                 onClick={() => { setSelectedLeague(null); setOpenLetter(null); }}
                 className={cn(
-                  'rounded-full border px-3 py-1.5 text-caption font-semibold transition-all',
+                  'flex-shrink-0 rounded-full border px-3.5 py-1.5 text-caption font-semibold transition-all',
                   !selectedLeague && !openLetter
                     ? 'border-oracle-gold bg-oracle-gold/15 text-oracle-gold-dark'
                     : 'border-warm-sand bg-white text-txt-secondary hover:border-warm-stone',
@@ -314,53 +296,83 @@ export default function StreaksPage() {
               >
                 All
               </button>
-
-              {(modalSearch
-                ? sortedCountries.filter((c) =>
-                    c.toLowerCase().includes(modalSearch.toLowerCase()) ||
-                    (leaguesByCountry.get(c) || []).some((l) => l.name.toLowerCase().includes(modalSearch.toLowerCase()))
-                  )
-                : sortedCountries
-              ).map((country) => {
-                const countryStreaks = streakCountByCountry.get(country) || 0;
+              {popularCountries.filter((c) => leaguesByCountry.has(c)).map((country) => {
                 const isOpen = openLetter === country;
                 const hasActive = selectedLeague?.country === country;
-
                 return (
                   <button
                     key={country}
                     onClick={() => setOpenLetter(isOpen ? null : country)}
                     className={cn(
-                      'flex items-center gap-1 rounded-full border px-3 py-1.5 text-caption font-semibold transition-all',
-                      hasActive
-                        ? 'border-oracle-gold bg-oracle-gold/15 text-oracle-gold-dark'
-                        : isOpen
-                          ? 'border-dark-ink bg-dark-ink text-txt-inverse'
-                          : countryStreaks > 0
-                            ? 'border-warm-sand bg-white text-txt-secondary hover:border-warm-stone'
-                            : 'border-warm-sand/60 bg-warm-cream/40 text-txt-tertiary hover:border-warm-stone',
+                      'flex-shrink-0 rounded-full border px-3.5 py-1.5 text-caption font-semibold transition-all',
+                      hasActive ? 'border-oracle-gold bg-oracle-gold/15 text-oracle-gold-dark'
+                        : isOpen ? 'border-dark-ink bg-dark-ink text-txt-inverse'
+                        : 'border-warm-sand bg-white text-txt-secondary hover:border-warm-stone',
                     )}
                   >
                     {country}
-                    {countryStreaks > 0 && (
-                      <span className={cn(
-                        'rounded-full px-1.5 py-0.5 text-[9px] font-bold leading-none',
-                        hasActive || isOpen ? 'bg-white/20' : 'bg-oracle-gold/15 text-oracle-gold-dark',
-                      )}>
-                        {countryStreaks > 99 ? '99+' : countryStreaks}
-                      </span>
-                    )}
                   </button>
                 );
               })}
+              {/* More button — opens search */}
+              <button
+                onClick={() => setOpenLetter(openLetter === '_search' ? null : '_search')}
+                className={cn(
+                  'flex-shrink-0 rounded-full border px-3.5 py-1.5 text-caption font-semibold transition-all',
+                  openLetter === '_search' ? 'border-dark-ink bg-dark-ink text-txt-inverse' : 'border-warm-sand bg-white text-txt-secondary hover:border-warm-stone',
+                )}
+              >
+                More...
+              </button>
             </div>
 
-            {/* Leagues under selected country — expand inline */}
-            {openLetter && leaguesByCountry.has(openLetter) && (
-              <div className="mt-3 rounded-oracle-md border border-warm-sand bg-white p-2">
-                <p className="mb-2 px-2 text-caption font-semibold text-txt-tertiary">
-                  {openLetter} — {(leaguesByCountry.get(openLetter) || []).length} leagues
-                </p>
+            {/* Search panel — shows when "More" is clicked */}
+            {openLetter === '_search' && (
+              <div className="rounded-oracle-md border border-warm-sand bg-white p-3">
+                <div className="mb-2 flex items-center gap-2 rounded-oracle-sm bg-warm-cream px-3 py-2">
+                  <Search className="h-4 w-4 flex-shrink-0 text-txt-tertiary" />
+                  <input
+                    type="text"
+                    value={modalSearch}
+                    onChange={(e) => setModalSearch(e.target.value)}
+                    placeholder="Search country or league..."
+                    className="w-full bg-transparent text-body-sm text-txt-primary placeholder:text-txt-tertiary outline-none"
+                    autoFocus
+                  />
+                  {modalSearch && (
+                    <button onClick={() => setModalSearch('')} className="text-txt-tertiary hover:text-txt-primary">
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
+                <div className="max-h-60 overflow-y-auto space-y-0.5">
+                  {sortedCountries
+                    .filter((c) => !modalSearch || c.toLowerCase().includes(modalSearch.toLowerCase()))
+                    .map((country) => (
+                    <button
+                      key={country}
+                      onClick={() => { setOpenLetter(country); setModalSearch(''); }}
+                      className="flex w-full items-center justify-between rounded-oracle-sm px-3 py-2 text-left text-body-sm hover:bg-warm-cream"
+                    >
+                      <span className="font-medium text-txt-primary">{country}</span>
+                      <span className="text-caption text-txt-tertiary">{(leaguesByCountry.get(country) || []).length} leagues</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Leagues panel — shows when a country is selected */}
+            {openLetter && openLetter !== '_search' && leaguesByCountry.has(openLetter) && (
+              <div className="rounded-oracle-md border border-warm-sand bg-white p-2">
+                <div className="mb-2 flex items-center justify-between px-2">
+                  <p className="text-caption font-semibold text-txt-primary">
+                    {openLetter} — {(leaguesByCountry.get(openLetter) || []).length} leagues
+                  </p>
+                  <button onClick={() => setOpenLetter(null)} className="text-txt-tertiary hover:text-txt-primary">
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
                 <div className="max-h-60 overflow-y-auto space-y-0.5">
                   {(leaguesByCountry.get(openLetter) || []).map((league) => {
                     const count = league.streakCount || 0;
@@ -371,7 +383,6 @@ export default function StreaksPage() {
                         onClick={() => {
                           setSelectedLeague(isSelected ? null : { id: league.id, name: league.name, country: league.country });
                           setOpenLetter(null);
-                          setModalSearch('');
                         }}
                         className={cn(
                           'flex w-full items-center gap-3 rounded-oracle-sm px-3 py-2 text-left transition-all',
