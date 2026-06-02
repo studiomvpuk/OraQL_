@@ -136,7 +136,7 @@ function AuthPageContent() {
           </p>
 
           {/* Google SSO */}
-          <a
+          {/* <a
             href={`${API_URL}/api/v1/auth/google`}
             className="mt-8 flex w-full items-center justify-center gap-3 rounded-oracle-sm border border-warm-stone bg-white px-4 py-3 text-body font-medium transition-all duration-normal hover:bg-warm-cream hover:border-warm-taupe"
           >
@@ -159,14 +159,14 @@ function AuthPageContent() {
               />
             </svg>
             Continue with Google
-          </a>
+          </a> */}
 
           {/* Divider */}
-          <div className="my-6 flex items-center gap-4">
+          {/* <div className="my-6 flex items-center gap-4">
             <div className="flex-1 border-t border-warm-sand" />
             <span className="text-caption text-txt-tertiary">or</span>
             <div className="flex-1 border-t border-warm-sand" />
-          </div>
+          </div> */}
 
           {/* Email form */}
           <form onSubmit={handleSubmit} className="space-y-4">
