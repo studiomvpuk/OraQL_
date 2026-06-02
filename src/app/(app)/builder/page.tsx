@@ -198,52 +198,64 @@ export default function BuilderPage() {
             {selections.map((s, idx) => (
               <div
                 key={s.id}
-                className="group flex flex-wrap items-center gap-3 rounded-oracle-md border border-warm-sand bg-white p-4 transition-all duration-200 hover:border-oracle-gold hover:shadow-sm sm:flex-nowrap sm:gap-4 sm:p-5"
+                className="group overflow-hidden rounded-oracle-md border border-warm-sand bg-white transition-all duration-200 hover:border-oracle-gold hover:shadow-sm"
               >
-                {/* Selection Number Badge */}
-                <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-warm-cream font-mono text-body-sm font-bold text-txt-secondary">
-                  {idx + 1}
-                </span>
-
-                {/* Event Information */}
-                <div className="order-3 min-w-0 flex-[1_0_100%] sm:order-none sm:flex-1">
-                  <p className="truncate font-display text-heading tracking-tight text-txt-primary">
-                    {s.market.event.homeTeam.shortName || s.market.event.homeTeam.name} vs{' '}
-                    {s.market.event.awayTeam.shortName || s.market.event.awayTeam.name}
-                  </p>
-                  <p className="mt-1 text-body-sm font-medium text-txt-primary">
-                    {formatMarketName(s.market.name)}{s.market.line != null ? ` ${s.market.line}` : ''}
-                    {s.market.streakSummary && (
-                      <span className="ml-2 rounded-full bg-prob-high/15 px-2 py-0.5 text-[10px] font-bold text-prob-high">STREAK</span>
-                    )}
-                  </p>
-                  <p className="mt-0.5 text-caption text-txt-tertiary">
-                    {s.market.event.league.name}{s.market.event.league.country ? ` (${s.market.event.league.country})` : ''}
-                    <span className="mx-1.5 text-warm-stone">·</span>
-                    {formatKickoff(s.market.event.kickoffAt)}
-                    {s.market.streakSummary && (
-                      <>
-                        <span className="mx-1.5 text-warm-stone">·</span>
-                        <span className="text-prob-high">{s.market.streakSummary}</span>
-                      </>
-                    )}
-                  </p>
-                </div>
-
-                {/* Probability Badge */}
-                <ProbabilityBadge
-                  probability={s.market.probability}
-                  isValueBet={s.market.isValueBet}
-                />
-
-                {/* Remove Button — always visible on mobile, hover-revealed on desktop */}
-                <button
-                  onClick={() => remove(s.market.id)}
-                  className="ml-auto flex-shrink-0 rounded-md p-2 text-txt-tertiary transition-all duration-200 hover:bg-danger/10 hover:text-danger sm:ml-0 sm:opacity-0 sm:group-hover:opacity-100"
-                  aria-label="Remove selection"
+                {/* Clickable area — links to event */}
+                <Link
+                  href={`/events/${s.market.event.id || ''}`}
+                  className="flex items-center gap-3 px-4 py-3 sm:gap-4"
                 >
-                  <X className="h-4 w-4" />
-                </button>
+                  {/* Number */}
+                  <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-warm-cream font-mono text-body-sm font-bold text-txt-secondary">
+                    {idx + 1}
+                  </span>
+
+                  {/* Pick → Team → Event → League (ordered as requested) */}
+                  <div className="min-w-0 flex-1">
+                    {/* Pick */}
+                    <p className="text-body-sm font-semibold text-txt-primary">
+                      {formatMarketName(s.market.name)}{s.market.line != null ? ` ${s.market.line}` : ''}
+                      {s.market.streakSummary && (
+                        <span className="ml-2 rounded-full bg-prob-high/15 px-2 py-0.5 text-[10px] font-bold text-prob-high">STREAK</span>
+                      )}
+                    </p>
+                    {/* Event with time */}
+                    <p className="mt-0.5 text-body-sm text-txt-secondary">
+                      {s.market.event.homeTeam.name} vs {s.market.event.awayTeam.name}
+                      <span className="mx-1.5 text-warm-stone">·</span>
+                      {formatKickoff(s.market.event.kickoffAt)}
+                    </p>
+                    {/* League (country) */}
+                    <p className="mt-0.5 text-caption text-txt-tertiary">
+                      {s.market.event.league.name}{s.market.event.league.country ? ` (${s.market.event.league.country})` : ''}
+                    </p>
+                  </div>
+
+                  {/* Probability */}
+                  <ProbabilityBadge
+                    probability={s.market.probability}
+                    isValueBet={s.market.isValueBet}
+                  />
+                </Link>
+
+                {/* Streak explanation + remove button */}
+                {(s.market.streakSummary || true) && (
+                  <div className="flex items-center justify-between border-t border-warm-sand/50 px-4 py-2">
+                    {s.market.streakSummary ? (
+                      <p className="flex items-center gap-1 text-caption text-prob-high">
+                        <Flame className="h-3 w-3 flex-shrink-0" />
+                        <span className="truncate">{s.market.streakSummary}</span>
+                      </p>
+                    ) : <span />}
+                    <button
+                      onClick={() => remove(s.market.id)}
+                      className="flex-shrink-0 rounded-md p-1.5 text-txt-tertiary transition-all hover:bg-danger/10 hover:text-danger"
+                      aria-label="Remove selection"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                )}
               </div>
             ))}
           </div>
