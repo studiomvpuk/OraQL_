@@ -17,7 +17,7 @@ import {
   Search,
   Info,
 } from 'lucide-react';
-import { cn, formatProbability, getProbabilityTier } from '@/lib/utils';
+import { cn, formatProbability, getProbabilityTier, formatKickoff } from '@/lib/utils';
 import { useBuilderStore } from '@/stores/builder.store';
 import { api } from '@/lib/api';
 import type { ScoredStreak, SuggestedTicket, StreakStats, League } from '@/types';
@@ -87,16 +87,33 @@ export default function StreaksPage() {
     }
   }
 
-  // Group leagues by first letter for the A-Z grid
-  const leaguesByLetter = new Map<string, League[]>();
+  // Group leagues by country for country-first navigation
+  const leaguesByCountry = new Map<string, League[]>();
   for (const league of leagues) {
-    const letter = league.name.charAt(0).toUpperCase();
-    const arr = leaguesByLetter.get(letter) || [];
+    const country = league.country || 'Other';
+    const arr = leaguesByCountry.get(country) || [];
     arr.push(league);
-    leaguesByLetter.set(letter, arr);
+    leaguesByCountry.set(country, arr);
   }
 
-  const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+  // Sort countries alphabetically, with popular ones first
+  const popularCountries = ['England', 'Spain', 'Germany', 'Italy', 'France', 'Netherlands', 'Portugal', 'Brazil', 'World'];
+  const sortedCountries = Array.from(leaguesByCountry.keys()).sort((a, b) => {
+    const aIdx = popularCountries.indexOf(a);
+    const bIdx = popularCountries.indexOf(b);
+    if (aIdx !== -1 && bIdx !== -1) return aIdx - bIdx;
+    if (aIdx !== -1) return -1;
+    if (bIdx !== -1) return 1;
+    return a.localeCompare(b);
+  });
+
+  // Count total streaks per country
+  const streakCountByCountry = new Map<string, number>();
+  for (const [country, countryLeagues] of leaguesByCountry) {
+    let total = 0;
+    for (const l of countryLeagues) total += l.streakCount || 0;
+    streakCountByCountry.set(country, total);
+  }
 
   async function applyTicket(ticket: SuggestedTicket) {
     if (applyingTicketId) return;
@@ -249,7 +266,7 @@ export default function StreaksPage() {
           </span>
         </div>
 
-        {/* League filter: A-Z grid + active filter pill */}
+        {/* League filter: Country-first navigation */}
         {!isLoading && leagues.length > 0 && (
           <div className="mb-6">
             {/* Active filter indicator */}
@@ -266,177 +283,125 @@ export default function StreaksPage() {
               </div>
             )}
 
-            {/* A-Z letter grid */}
+            {/* Search bar */}
+            <div className="mb-3 flex items-center gap-2 rounded-oracle-md bg-warm-cream px-3 py-2">
+              <Search className="h-4 w-4 flex-shrink-0 text-txt-tertiary" />
+              <input
+                type="text"
+                value={modalSearch}
+                onChange={(e) => setModalSearch(e.target.value)}
+                placeholder="Search country or league..."
+                className="w-full bg-transparent text-body-sm text-txt-primary placeholder:text-txt-tertiary outline-none"
+              />
+              {modalSearch && (
+                <button onClick={() => setModalSearch('')} className="text-txt-tertiary hover:text-txt-primary">
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+
+            {/* Country pills — popular first, then alphabetical */}
             <div className="flex flex-wrap gap-1.5">
-              {/* "All" square */}
+              {/* All */}
               <button
                 onClick={() => { setSelectedLeague(null); setOpenLetter(null); }}
                 className={cn(
-                  'flex h-9 w-9 items-center justify-center rounded-oracle-sm text-caption font-bold transition-all duration-150',
-                  !selectedLeague
-                    ? 'bg-oracle-gold/15 text-oracle-gold-dark ring-1 ring-oracle-gold'
-                    : 'bg-warm-cream text-txt-secondary hover:bg-warm-sand',
+                  'rounded-full border px-3 py-1.5 text-caption font-semibold transition-all',
+                  !selectedLeague && !openLetter
+                    ? 'border-oracle-gold bg-oracle-gold/15 text-oracle-gold-dark'
+                    : 'border-warm-sand bg-white text-txt-secondary hover:border-warm-stone',
                 )}
-                title="Show all leagues"
               >
                 All
               </button>
 
-              {ALPHABET.map((letter) => {
-                const letterLeagues = leaguesByLetter.get(letter) || [];
-                const hasLeagues = letterLeagues.length > 0;
-                const letterStreakCount = letterLeagues.reduce(
-                  (sum, l) => sum + (streakCountByLeague.get(l.name) || 0), 0,
-                );
-                const hasActiveFilter = selectedLeague && letterLeagues.some((l) => l.id === selectedLeague.id);
+              {(modalSearch
+                ? sortedCountries.filter((c) =>
+                    c.toLowerCase().includes(modalSearch.toLowerCase()) ||
+                    (leaguesByCountry.get(c) || []).some((l) => l.name.toLowerCase().includes(modalSearch.toLowerCase()))
+                  )
+                : sortedCountries
+              ).map((country) => {
+                const countryStreaks = streakCountByCountry.get(country) || 0;
+                const isOpen = openLetter === country;
+                const hasActive = selectedLeague?.country === country;
 
                 return (
                   <button
-                    key={letter}
-                    onClick={() => hasLeagues && setOpenLetter(letter)}
-                    disabled={!hasLeagues}
+                    key={country}
+                    onClick={() => setOpenLetter(isOpen ? null : country)}
                     className={cn(
-                      'relative flex h-9 w-9 items-center justify-center rounded-oracle-sm font-mono text-caption font-bold transition-all duration-150',
-                      hasActiveFilter
-                        ? 'bg-oracle-gold/15 text-oracle-gold-dark ring-1 ring-oracle-gold'
-                        : hasLeagues && letterStreakCount > 0
-                          ? 'bg-white text-txt-primary ring-1 ring-warm-sand hover:bg-warm-cream hover:ring-warm-stone'
-                          : hasLeagues
-                            ? 'bg-warm-cream/60 text-txt-tertiary ring-1 ring-warm-sand/60 hover:bg-warm-cream hover:ring-warm-stone'
-                            : 'bg-warm-cream/30 text-txt-tertiary/40 cursor-default',
+                      'flex items-center gap-1 rounded-full border px-3 py-1.5 text-caption font-semibold transition-all',
+                      hasActive
+                        ? 'border-oracle-gold bg-oracle-gold/15 text-oracle-gold-dark'
+                        : isOpen
+                          ? 'border-dark-ink bg-dark-ink text-txt-inverse'
+                          : countryStreaks > 0
+                            ? 'border-warm-sand bg-white text-txt-secondary hover:border-warm-stone'
+                            : 'border-warm-sand/60 bg-warm-cream/40 text-txt-tertiary hover:border-warm-stone',
                     )}
-                    title={hasLeagues ? `${letterLeagues.length} league${letterLeagues.length !== 1 ? 's' : ''}` : 'No leagues'}
                   >
-                    {letter}
-                    {hasLeagues && letterStreakCount > 0 && (
-                      <span className="absolute -right-0.5 -top-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-oracle-gold text-[8px] font-bold text-white">
-                        {letterStreakCount > 9 ? '9+' : letterStreakCount}
+                    {country}
+                    {countryStreaks > 0 && (
+                      <span className={cn(
+                        'rounded-full px-1.5 py-0.5 text-[9px] font-bold leading-none',
+                        hasActive || isOpen ? 'bg-white/20' : 'bg-oracle-gold/15 text-oracle-gold-dark',
+                      )}>
+                        {countryStreaks > 99 ? '99+' : countryStreaks}
                       </span>
                     )}
                   </button>
                 );
               })}
             </div>
+
+            {/* Leagues under selected country — expand inline */}
+            {openLetter && leaguesByCountry.has(openLetter) && (
+              <div className="mt-3 rounded-oracle-md border border-warm-sand bg-white p-2">
+                <p className="mb-2 px-2 text-caption font-semibold text-txt-tertiary">
+                  {openLetter} — {(leaguesByCountry.get(openLetter) || []).length} leagues
+                </p>
+                <div className="max-h-60 overflow-y-auto space-y-0.5">
+                  {(leaguesByCountry.get(openLetter) || []).map((league) => {
+                    const count = league.streakCount || 0;
+                    const isSelected = selectedLeague?.id === league.id;
+                    return (
+                      <button
+                        key={league.id}
+                        onClick={() => {
+                          setSelectedLeague(isSelected ? null : { id: league.id, name: league.name, country: league.country });
+                          setOpenLetter(null);
+                          setModalSearch('');
+                        }}
+                        className={cn(
+                          'flex w-full items-center gap-3 rounded-oracle-sm px-3 py-2 text-left transition-all',
+                          isSelected ? 'bg-oracle-gold/10' : 'hover:bg-warm-cream',
+                        )}
+                      >
+                        {league.logoUrl ? (
+                          <img src={league.logoUrl} alt="" className="h-5 w-5 flex-shrink-0 object-contain" />
+                        ) : (
+                          <div className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-warm-sand text-[8px] font-bold text-txt-inverse">
+                            {league.name.charAt(0)}
+                          </div>
+                        )}
+                        <span className={cn('flex-1 truncate text-body-sm font-medium', isSelected ? 'text-oracle-gold-dark' : 'text-txt-primary')}>
+                          {league.name}
+                        </span>
+                        <span className={cn(
+                          'rounded-full px-2 py-0.5 text-[10px] font-bold',
+                          count > 0 ? 'bg-oracle-gold/15 text-oracle-gold-dark' : 'bg-warm-cream text-txt-tertiary',
+                        )}>
+                          {count}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         )}
-
-        {/* Letter modal */}
-        {openLetter && (() => {
-          const letterLeagueList = leaguesByLetter.get(openLetter) || [];
-          const searchFiltered = modalSearch
-            ? letterLeagueList.filter((l) =>
-                l.name.toLowerCase().includes(modalSearch.toLowerCase()) ||
-                (l.country && l.country.toLowerCase().includes(modalSearch.toLowerCase()))
-              )
-            : letterLeagueList;
-
-          return (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => { setOpenLetter(null); setModalSearch(''); }}>
-            <div
-              className="w-full max-w-md rounded-oracle-lg bg-white shadow-xl"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {/* Modal header */}
-              <div className="flex items-center justify-between border-b border-warm-sand px-5 py-4">
-                <div className="flex items-center gap-3">
-                  <span className="flex h-9 w-9 items-center justify-center rounded-oracle-sm bg-oracle-gold/15 font-mono text-heading font-bold text-oracle-gold-dark">
-                    {openLetter}
-                  </span>
-                  <div>
-                    <h3 className="font-display text-body font-semibold text-txt-primary">
-                      Leagues
-                    </h3>
-                    <p className="text-caption text-txt-tertiary">
-                      {letterLeagueList.length} league{letterLeagueList.length !== 1 ? 's' : ''}
-                    </p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => { setOpenLetter(null); setModalSearch(''); }}
-                  className="rounded-oracle-sm p-1.5 text-txt-tertiary transition-colors hover:bg-warm-cream hover:text-txt-primary"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-
-              {/* Search bar */}
-              <div className="border-b border-warm-sand px-4 py-3">
-                <div className="flex items-center gap-2 rounded-oracle-md bg-warm-cream px-3 py-2">
-                  <Search className="h-4 w-4 flex-shrink-0 text-txt-tertiary" />
-                  <input
-                    type="text"
-                    value={modalSearch}
-                    onChange={(e) => setModalSearch(e.target.value)}
-                    placeholder="Search leagues..."
-                    className="w-full bg-transparent text-body-sm text-txt-primary placeholder:text-txt-tertiary outline-none"
-                    autoFocus
-                  />
-                  {modalSearch && (
-                    <button onClick={() => setModalSearch('')} className="text-txt-tertiary hover:text-txt-primary">
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {/* League list */}
-              <div className="max-h-72 overflow-y-auto p-2">
-                {searchFiltered.length === 0 ? (
-                  <p className="px-3 py-6 text-center text-body-sm text-txt-tertiary">
-                    No leagues match &ldquo;{modalSearch}&rdquo;
-                  </p>
-                ) : searchFiltered.map((league) => {
-                  const count = league.streakCount || 0;
-                  const isSelected = selectedLeague?.id === league.id;
-                  return (
-                    <button
-                      key={league.id}
-                      onClick={() => {
-                        setSelectedLeague(isSelected ? null : { id: league.id, name: league.name, country: league.country });
-                        setOpenLetter(null);
-                        setModalSearch('');
-                      }}
-                      className={cn(
-                        'flex w-full items-center gap-3 rounded-oracle-md px-3 py-2.5 text-left transition-all duration-150',
-                        isSelected
-                          ? 'bg-oracle-gold/10'
-                          : 'hover:bg-warm-cream',
-                      )}
-                    >
-                      {league.logoUrl ? (
-                        <img src={league.logoUrl} alt="" className="h-6 w-6 flex-shrink-0 object-contain" />
-                      ) : (
-                        <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-warm-sand text-[10px] font-bold text-txt-inverse">
-                          {league.name.charAt(0)}
-                        </div>
-                      )}
-                      <div className="min-w-0 flex-1">
-                        <p className={cn(
-                          'truncate text-body-sm font-medium',
-                          isSelected ? 'text-oracle-gold-dark' : 'text-txt-primary',
-                        )}>
-                          {league.name}
-                        </p>
-                        {league.country && (
-                          <p className="text-caption text-txt-tertiary">{league.country}</p>
-                        )}
-                      </div>
-                      <span className={cn(
-                        'rounded-full px-2 py-0.5 text-caption font-semibold',
-                        count > 0
-                          ? 'bg-oracle-gold/15 text-oracle-gold-dark'
-                          : 'bg-warm-cream text-txt-tertiary',
-                      )}>
-                        {count} {count === 1 ? 'streak' : 'streaks'}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-          );
-        })()}
 
         {/* Streak list — grouped by team */}
         {isLoading || isFilterLoading ? (
@@ -822,6 +787,9 @@ function ExpandableLeg({ leg }: { leg: import('@/types').TicketLeg }) {
             {leg.leagueName}{leg.leagueCountry ? ` (${leg.leagueCountry})` : ''}
             <span className="mx-1 text-warm-stone">·</span>
             {shortMarketLabel(leg.marketName, leg.line)} vs {leg.opponent}
+            {leg.kickoffAt && (
+              <><span className="mx-1 text-warm-stone">·</span>{formatKickoff(leg.kickoffAt)}</>
+            )}
           </p>
         </div>
         <span className={cn(
@@ -858,6 +826,13 @@ function ExpandableLeg({ leg }: { leg: import('@/types').TicketLeg }) {
               {(leg.confidence * 100).toFixed(0)}%
             </span>
           </div>
+          {/* Kickoff */}
+          {leg.kickoffAt && (
+            <div className="flex items-center gap-2">
+              <span className="w-14 text-[10px] font-semibold uppercase tracking-widest text-txt-tertiary">Time</span>
+              <span className="text-body-sm text-txt-primary">{formatKickoff(leg.kickoffAt)}</span>
+            </div>
+          )}
           {/* Streak explanation */}
           {leg.streakSummary && (
             <div className="flex items-start gap-2">
@@ -979,7 +954,45 @@ function StreakRowCompact({ streak }: { streak: ScoredStreak }) {
       </button>
 
       {isExpanded && (
-        <div className="border-t border-warm-sand/60 bg-warm-cream/30 px-3 py-3">
+        <div className="border-t border-warm-sand/60 bg-warm-cream/30 px-3 py-3 space-y-3">
+          {/* Toggle controls */}
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Window size toggle */}
+            <span className="text-[10px] font-semibold uppercase tracking-widest text-txt-tertiary">Matches:</span>
+            {[5, 10, 15].map((w) => (
+              <span
+                key={w}
+                className={cn(
+                  'rounded-full px-2.5 py-0.5 text-[10px] font-bold transition-all',
+                  streak.windowSize === w
+                    ? 'bg-dark-ink text-txt-inverse'
+                    : 'bg-warm-cream text-txt-tertiary',
+                )}
+              >
+                {w}
+              </span>
+            ))}
+
+            <span className="mx-1 text-warm-stone">|</span>
+
+            {/* Venue toggle */}
+            <span className="text-[10px] font-semibold uppercase tracking-widest text-txt-tertiary">Venue:</span>
+            {(['ALL', 'HOME', 'AWAY'] as const).map((v) => (
+              <span
+                key={v}
+                className={cn(
+                  'rounded-full px-2.5 py-0.5 text-[10px] font-bold transition-all',
+                  streak.venueFilter === v
+                    ? 'bg-dark-ink text-txt-inverse'
+                    : 'bg-warm-cream text-txt-tertiary',
+                )}
+              >
+                {v === 'ALL' ? 'All' : v === 'HOME' ? 'Home' : 'Away'}
+              </span>
+            ))}
+          </div>
+
+          {/* Stats */}
           <div className="grid gap-3 sm:grid-cols-3">
             <div className="rounded-oracle-sm bg-white p-2.5">
               <p className="text-[10px] font-semibold uppercase tracking-widest text-txt-tertiary">Hit Rate</p>
@@ -998,8 +1011,9 @@ function StreakRowCompact({ streak }: { streak: ScoredStreak }) {
               <p className="font-mono text-body font-bold text-oracle-gold-dark">{streak.streakLength} in a row</p>
             </div>
           </div>
+
           {streak.summary && (
-            <p className="mt-2 text-caption text-txt-secondary">{streak.summary}</p>
+            <p className="text-caption text-txt-secondary">{streak.summary}</p>
           )}
         </div>
       )}
