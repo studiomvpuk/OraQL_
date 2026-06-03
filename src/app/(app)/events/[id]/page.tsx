@@ -334,6 +334,8 @@ export default function EventDetailPage() {
                 streakSuggestions={streakSuggestions}
                 homeTeam={event.homeTeam.name}
                 awayTeam={event.awayTeam.name}
+                homeTeamId={event.homeTeam.id}
+                awayTeamId={event.awayTeam.id}
                 homeTeamLogo={event.homeTeam.logoUrl}
                 awayTeamLogo={event.awayTeam.logoUrl}
               />
@@ -852,6 +854,8 @@ function MarketsTab({
   streakSuggestions = [],
   homeTeam,
   awayTeam,
+  homeTeamId,
+  awayTeamId,
   homeTeamLogo,
   awayTeamLogo,
 }: {
@@ -866,6 +870,8 @@ function MarketsTab({
   streakSuggestions?: StreakSuggestion[];
   homeTeam: string;
   awayTeam: string;
+  homeTeamId: string;
+  awayTeamId: string;
   homeTeamLogo?: string;
   awayTeamLogo?: string;
 }) {
@@ -1013,103 +1019,142 @@ function MarketsTab({
         <div className="rounded-oracle-md bg-warm-white py-8 text-center">
           <p className="text-body-sm text-txt-tertiary">No markets available for this event.</p>
         </div>
-      ) : (
-        Array.from(tables.entries()).map(([key, table]) => (
+      ) : (() => {
+        // Split streak suggestions by team
+        const homeSuggestions = (streakSuggestions || []).filter((s) => s.teamId === homeTeamId);
+        const awaySuggestions = (streakSuggestions || []).filter((s) => s.teamId === awayTeamId);
+
+        // Build line → { homeOver, homeUnder, awayOver, awayUnder } per market type
+        type TeamRow = { line: number | null | undefined; homeOver?: StreakSuggestion; homeUnder?: StreakSuggestion; awayOver?: StreakSuggestion; awayUnder?: StreakSuggestion };
+        type TeamTable = { title: string; rows: TeamRow[]; homeStandalones: StreakSuggestion[]; awayStandalones: StreakSuggestion[] };
+        const teamTables = new Map<string, TeamTable>();
+
+        const allSuggestions = [...homeSuggestions.map((s) => ({ ...s, _side: 'home' as const })), ...awaySuggestions.map((s) => ({ ...s, _side: 'away' as const }))];
+
+        for (const s of allSuggestions) {
+          const isOver = s.marketName.includes('OVER');
+          const isUnder = s.marketName.includes('UNDER');
+          const baseName = s.marketName.replace(/_OVER|_UNDER/, '');
+          const title = baseName === 'GOALS' ? 'Goals Over/Under'
+            : baseName === 'TEAM_GOALS' ? 'Team Goals Over/Under'
+            : baseName === 'CORNERS' ? 'Corners Over/Under'
+            : baseName === 'CARDS' ? 'Cards Over/Under'
+            : baseName.replace(/_/g, ' ');
+
+          if (isOver || isUnder) {
+            if (!teamTables.has(baseName)) teamTables.set(baseName, { title, rows: [], homeStandalones: [], awayStandalones: [] });
+            const table = teamTables.get(baseName)!;
+            let row = table.rows.find((r) => r.line === s.line);
+            if (!row) { row = { line: s.line }; table.rows.push(row); }
+            if (s._side === 'home' && isOver) row.homeOver = s;
+            if (s._side === 'home' && isUnder) row.homeUnder = s;
+            if (s._side === 'away' && isOver) row.awayOver = s;
+            if (s._side === 'away' && isUnder) row.awayUnder = s;
+          } else {
+            if (!teamTables.has('OTHER')) teamTables.set('OTHER', { title: 'Other Markets', rows: [], homeStandalones: [], awayStandalones: [] });
+            if (s._side === 'home') teamTables.get('OTHER')!.homeStandalones.push(s);
+            else teamTables.get('OTHER')!.awayStandalones.push(s);
+          }
+        }
+
+        for (const t of teamTables.values()) t.rows.sort((a, b) => (a.line ?? 0) - (b.line ?? 0));
+
+        const ProbCell = ({ s, side }: { s?: StreakSuggestion; side: string }) => {
+          if (!s) return <div className="w-16" />;
+          return (
+            <div className={cn(
+              'flex w-16 items-center justify-center gap-0.5 rounded px-1 py-2 font-mono text-caption font-bold',
+              s.confidence > 0.5 ? 'bg-prob-high text-white' : 'bg-warm-cream text-txt-tertiary',
+            )}>
+              {(s.confidence * 100).toFixed(0)}%
+              {s.confidence > 0.5 && <Flame className="h-2.5 w-2.5" />}
+            </div>
+          );
+        };
+
+        return Array.from(teamTables.entries()).map(([key, table]) => (
           <div key={key} className="overflow-hidden rounded-oracle-md border border-warm-sand">
-            {/* Match header with team names — like a betting site */}
-            <div className="bg-dark-ink px-4 py-3">
-              <div className="flex items-center gap-3">
-                {homeTeamLogo && <img src={homeTeamLogo} alt="" className="h-5 w-5 object-contain" />}
-                <span className="font-display text-body-sm font-semibold text-txt-inverse">{homeTeam}</span>
-                <span className="text-caption text-txt-inverse-2">vs</span>
-                <span className="font-display text-body-sm font-semibold text-txt-inverse">{awayTeam}</span>
-                {awayTeamLogo && <img src={awayTeamLogo} alt="" className="h-5 w-5 object-contain" />}
+            {/* Header — market type */}
+            <div className="bg-dark-ink px-4 py-2">
+              <span className="text-caption font-semibold uppercase tracking-widest text-oracle-gold">{table.title}</span>
+            </div>
+
+            {/* Column headers — team names */}
+            <div className="flex items-center bg-dark-charcoal px-3 py-2">
+              <div className="w-12 flex-shrink-0" />
+              <div className="flex flex-1 justify-center gap-1">
+                {homeTeamLogo && <img src={homeTeamLogo} alt="" className="h-4 w-4 object-contain" />}
+                <span className="text-[10px] font-bold uppercase tracking-widest text-txt-inverse">{homeTeam}</span>
+              </div>
+              <div className="w-px self-stretch bg-warm-stone/30" />
+              <div className="flex flex-1 justify-center gap-1">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-txt-inverse">{awayTeam}</span>
+                {awayTeamLogo && <img src={awayTeamLogo} alt="" className="h-4 w-4 object-contain" />}
               </div>
             </div>
 
-            {/* Market type sub-header with Over/Under columns */}
-            <div className="flex items-center bg-dark-charcoal px-4 py-2">
-              <span className="flex-1 text-caption font-semibold uppercase tracking-widest text-oracle-gold">{table.title}</span>
-              {table.rows.length > 0 && (
-                <div className="flex gap-2">
-                  <span className="w-[4.5rem] text-center text-[10px] font-bold uppercase tracking-widest text-txt-inverse-2">Over</span>
-                  <span className="w-[4.5rem] text-center text-[10px] font-bold uppercase tracking-widest text-txt-inverse-2">Under</span>
+            {/* Sub-header: Over / Under labels */}
+            {table.rows.length > 0 && (
+              <div className="flex items-center border-b border-warm-sand/50 bg-warm-cream/40 px-3 py-1">
+                <div className="w-12 flex-shrink-0 text-[9px] font-bold uppercase tracking-widest text-txt-tertiary">Line</div>
+                <div className="flex flex-1 justify-center gap-1">
+                  <span className="w-16 text-center text-[9px] font-bold uppercase tracking-widest text-txt-tertiary">Over</span>
+                  <span className="w-16 text-center text-[9px] font-bold uppercase tracking-widest text-txt-tertiary">Under</span>
                 </div>
-              )}
-            </div>
+                <div className="w-px self-stretch" />
+                <div className="flex flex-1 justify-center gap-1">
+                  <span className="w-16 text-center text-[9px] font-bold uppercase tracking-widest text-txt-tertiary">Over</span>
+                  <span className="w-16 text-center text-[9px] font-bold uppercase tracking-widest text-txt-tertiary">Under</span>
+                </div>
+              </div>
+            )}
 
-            {/* Over/Under rows */}
+            {/* Rows */}
             {table.rows.map((row, ri) => (
-              <div key={ri} className={cn('flex items-center border-b border-warm-sand/50 last:border-0', ri % 2 === 0 ? 'bg-white' : 'bg-warm-cream/20')}>
-                {/* Line label */}
-                <div className="flex-1 px-4 py-2.5">
+              <div key={ri} className={cn('flex items-center border-b border-warm-sand/50 last:border-0 px-3 py-1.5', ri % 2 === 0 ? 'bg-white' : 'bg-warm-cream/20')}>
+                <div className="w-12 flex-shrink-0">
                   <span className="font-mono text-body-sm font-bold text-txt-primary">{row.line}</span>
                 </div>
-
-                <div className="flex gap-2 px-3 py-1.5">
-                  {/* Over cell — green if >50% */}
-                  {row.over ? (
-                    <button
-                      onClick={() => setSelectedMarket(selectedMarket?.id === row.over!.id ? null : row.over!)}
-                      className={cn(
-                        'flex w-[4.5rem] items-center justify-center gap-1 rounded px-2 py-2 font-mono text-body-sm font-bold transition-all',
-                        row.over.probability > 0.5
-                          ? 'bg-prob-high text-white hover:bg-prob-high/90'
-                          : 'bg-warm-cream text-txt-tertiary hover:bg-warm-sand',
-                        selectedMarket?.id === row.over.id && 'ring-2 ring-oracle-gold',
-                      )}
-                    >
-                      {(row.over.probability * 100).toFixed(0)}%
-                      {row.over.streak && <Flame className="h-3 w-3" />}
-                    </button>
-                  ) : <div className="w-[4.5rem]" />}
-
-                  {/* Under cell — green if >50% */}
-                  {row.under ? (
-                    <button
-                      onClick={() => setSelectedMarket(selectedMarket?.id === row.under!.id ? null : row.under!)}
-                      className={cn(
-                        'flex w-[4.5rem] items-center justify-center gap-1 rounded px-2 py-2 font-mono text-body-sm font-bold transition-all',
-                        row.under.probability > 0.5
-                          ? 'bg-prob-high text-white hover:bg-prob-high/90'
-                          : 'bg-warm-cream text-txt-tertiary hover:bg-warm-sand',
-                        selectedMarket?.id === row.under.id && 'ring-2 ring-oracle-gold',
-                      )}
-                    >
-                      {(row.under.probability * 100).toFixed(0)}%
-                      {row.under.streak && <Flame className="h-3 w-3" />}
-                    </button>
-                  ) : <div className="w-[4.5rem]" />}
+                {/* Home team */}
+                <div className="flex flex-1 justify-center gap-1">
+                  <ProbCell s={row.homeOver} side="home" />
+                  <ProbCell s={row.homeUnder} side="home" />
+                </div>
+                <div className="w-px self-stretch bg-warm-sand/50" />
+                {/* Away team */}
+                <div className="flex flex-1 justify-center gap-1">
+                  <ProbCell s={row.awayOver} side="away" />
+                  <ProbCell s={row.awayUnder} side="away" />
                 </div>
               </div>
             ))}
 
-            {/* Standalone markets (BTTS, Clean Sheet, etc.) */}
-            {table.standalones.map((m) => (
-              <div key={m.id} className="flex items-center border-b border-warm-sand/50 last:border-0 bg-white">
-                <div className="flex-1 px-4 py-2.5">
-                  <span className="text-body-sm font-medium text-txt-primary">{m.shortName || formatStreakMarketName(m.name)}</span>
+            {/* Standalone markets per team */}
+            {(table.homeStandalones.length > 0 || table.awayStandalones.length > 0) && (
+              <div className="flex border-t border-warm-sand/50 bg-white px-3 py-2">
+                <div className="w-12 flex-shrink-0" />
+                <div className="flex flex-1 flex-col items-center gap-1">
+                  {table.homeStandalones.map((s) => (
+                    <div key={s.streakId} className="flex items-center gap-1">
+                      <span className="text-caption text-txt-secondary">{formatStreakMarketName(s.marketName)}</span>
+                      <ProbCell s={s} side="home" />
+                    </div>
+                  ))}
                 </div>
-                <div className="px-3 py-1.5">
-                  <button
-                    onClick={() => setSelectedMarket(selectedMarket?.id === m.id ? null : m)}
-                    className={cn(
-                      'flex items-center gap-1 rounded px-4 py-2 font-mono text-body-sm font-bold transition-all',
-                      m.probability > 0.5
-                        ? 'bg-prob-high text-white hover:bg-prob-high/90'
-                        : 'bg-warm-cream text-txt-tertiary hover:bg-warm-sand',
-                      selectedMarket?.id === m.id && 'ring-2 ring-oracle-gold',
-                    )}
-                  >
-                    {(m.probability * 100).toFixed(0)}%
-                    {m.streak && <Flame className="h-3 w-3" />}
-                  </button>
+                <div className="w-px self-stretch bg-warm-sand/50" />
+                <div className="flex flex-1 flex-col items-center gap-1">
+                  {table.awayStandalones.map((s) => (
+                    <div key={s.streakId} className="flex items-center gap-1">
+                      <span className="text-caption text-txt-secondary">{formatStreakMarketName(s.marketName)}</span>
+                      <ProbCell s={s} side="away" />
+                    </div>
+                  ))}
                 </div>
               </div>
-            ))}
+            )}
           </div>
-        ))
-      )}
+        ));
+      })()}
     </div>
   );
 }
