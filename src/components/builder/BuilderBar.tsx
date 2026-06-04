@@ -109,8 +109,8 @@ export function BuilderBar() {
 
 function formatMarket(name: string, line?: number | null): string {
   const labels: Record<string, string> = {
-    GOALS_OVER: 'Goals Over',
-    GOALS_UNDER: 'Goals Under',
+    GOALS_OVER: 'Match Goals Over',
+    GOALS_UNDER: 'Match Goals Under',
     TEAM_GOALS_OVER: 'Team Goals Over',
     TEAM_GOALS_UNDER: 'Team Goals Under',
     CORNERS_OVER: 'Corners Over',
@@ -120,7 +120,25 @@ function formatMarket(name: string, line?: number | null): string {
     BTTS_YES: 'Both Teams to Score',
     BTTS_NO: 'No BTTS',
     CLEAN_SHEET: 'Clean Sheet',
-    MATCH_RESULT_HOME: 'Home Win',
+    MATCH_RESULT_HOME: 'Win',
+    MATCH_RESULT_DRAW: 'Draw',
+    MATCH_RESULT_AWAY: 'Lose',
+    DOUBLE_CHANCE_WIN_OR_DRAW: 'Win or Draw',
+    DOUBLE_CHANCE_NO_DRAW: 'No Draw',
+    WIN_TO_NIL: 'Win to Nil',
+    TEAM_TO_SCORE_YES: 'Team to Score',
+    TEAM_TO_SCORE_NO: 'Team Not to Score',
+    TOTAL_GOALS_ODD: 'Total Goals Odd',
+    TOTAL_GOALS_EVEN: 'Total Goals Even',
+    EXACT_GOALS: 'Exact Goals',
+    SHOTS_OVER: 'Shots Over',
+    SHOTS_UNDER: 'Shots Under',
+    SHOTS_ON_TARGET_OVER: 'Shots on Target Over',
+    SHOTS_ON_TARGET_UNDER: 'Shots on Target Under',
+    FOULS_OVER: 'Fouls Over',
+    FOULS_UNDER: 'Fouls Under',
+    OFFSIDES_OVER: 'Offsides Over',
+    OFFSIDES_UNDER: 'Offsides Under',
   };
   const label = labels[name] || name.replace(/_/g, ' ');
   return line != null ? `${label} ${line}` : label;
